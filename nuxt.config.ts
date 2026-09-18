@@ -29,11 +29,13 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-06-30',
 
-  // A dev server reached by LAN address or DNS name fails Vite's host check
-  // by default. `nuxt dev` only; a production build never reads this.
+  // Vite answers localhost and any IP address on its own; a dev server
+  // reached by DNS name needs that name listed, or the host check refuses it.
+  // An empty list is Vite's own default, so nobody loses the DNS-rebinding
+  // check by copying this template. `nuxt dev` only; a build never reads it.
   vite: {
     server: {
-      allowedHosts: true
+      allowedHosts: process.env.NUXT_DEV_ALLOWED_HOSTS?.split(',').map(s => s.trim()).filter(Boolean) ?? []
     }
   },
 

@@ -52,6 +52,9 @@ onMounted(reload)
         variant="subtle"
         :title="problem"
       />
+      <p v-else-if="loading && !sheet" class="text-sm text-muted">
+        Loading the robot.
+      </p>
       <div v-else-if="sheet && tabs.length === 0" class="text-sm text-muted max-w-prose">
         <p class="font-medium text-default">
           Nothing published for this robot yet.

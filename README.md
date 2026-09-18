@@ -28,6 +28,11 @@ pnpm dev                  # http://localhost:3000
 `NUXT_PUBLIC_API_URL` is the cloud the app talks to: `http://localhost:8080`
 for a local dev stack, `https://api.fleetless.dev` for the real one.
 
+Reaching the dev server by DNS name — a tunnel, a machine on the office
+network — means listing that name in `NUXT_DEV_ALLOWED_HOSTS`. Vite refuses
+a host header it was not told about, which is what stops a DNS-rebinding
+attack on your dev server; localhost and plain IP addresses need no entry.
+
 ## 🧭 Set it up in the console
 
 Five settings, in this order. Each names the refusal you see without it, so

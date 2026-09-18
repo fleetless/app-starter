@@ -29,8 +29,13 @@ async function download(asset: Asset) {
     const a = document.createElement('a')
     a.href = url
     a.download = asset.name
+    // In the document and revoked on a timer: a click on a detached anchor is
+    // ignored by some browsers, and a URL revoked in the same tick is gone
+    // before the download has read it.
+    document.body.append(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   } catch (error) {
     problem.value = await onError(error)
   }

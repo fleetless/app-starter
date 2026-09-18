@@ -24,11 +24,22 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
 }], [{
   label: 'Appearance',
   icon: 'i-lucide-sun-moon',
+  // Three checkboxes read as a radio group: each ticks on the stored
+  // preference, not on the theme in force, so System is never ticked twice.
   children: [{
+    label: 'System',
+    icon: 'i-lucide-monitor',
+    type: 'checkbox',
+    checked: colorMode.preference === 'system',
+    onSelect(e: Event) {
+      e.preventDefault()
+      colorMode.preference = 'system'
+    }
+  }, {
     label: 'Light',
     icon: 'i-lucide-sun',
     type: 'checkbox',
-    checked: colorMode.value === 'light',
+    checked: colorMode.preference === 'light',
     onSelect(e: Event) {
       e.preventDefault()
       colorMode.preference = 'light'
@@ -37,7 +48,7 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     label: 'Dark',
     icon: 'i-lucide-moon',
     type: 'checkbox',
-    checked: colorMode.value === 'dark',
+    checked: colorMode.preference === 'dark',
     onSelect(e: Event) {
       e.preventDefault()
       colorMode.preference = 'dark'

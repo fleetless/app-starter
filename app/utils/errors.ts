@@ -36,8 +36,10 @@ export function sentenceFor(error: unknown): string {
     case 'quota_exceeded': return 'This app has reached its user limit.'
     case 'weak_password': return 'That password is too short. Twelve characters or more.'
     case 'rate_limited': {
-      const ms = typeof details?.retry_after_ms === 'number' ? details.retry_after_ms : 0
-      return `Too many attempts. Try again in ${Math.ceil(ms / 1000)} seconds.`
+      // No number is better than a wrong one: "in 0 seconds" invites a retry
+      // that is refused again.
+      const ms = typeof details?.retry_after_ms === 'number' ? details.retry_after_ms : null
+      return ms === null ? 'Too many attempts. Try again in a moment.' : `Too many attempts. Try again in ${Math.ceil(ms / 1000)} seconds.`
     }
     case 'target_state_conflict': {
       const fields = Array.isArray(details?.fields) ? (details.fields as { field?: string }[]) : []
