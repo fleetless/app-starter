@@ -30,7 +30,8 @@ onMounted(async () => {
     <h1 class="text-lg font-semibold">
       Verifying your address
     </h1>
-    <p v-if="state === 'spending'" class="text-sm text-muted">
+    <!-- 'done' too: the card would otherwise be blank while the redirect runs. -->
+    <p v-if="state === 'spending' || state === 'done'" class="text-sm text-muted">
       One moment.
     </p>
     <template v-else-if="state === 'spent'">

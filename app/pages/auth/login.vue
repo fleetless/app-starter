@@ -4,8 +4,10 @@ const route = useRoute()
 
 function next(): string {
   const raw = route.query.next
-  // Only a path inside this app; a full URL here would be an open redirect.
-  return typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/robots'
+  // Only a path inside this app. A second leading separator of either kind
+  // (`//host`, `/\host`) reads as external to the router, which throws here
+  // instead of navigating — so both fall back to the same place.
+  return typeof raw === 'string' && raw.startsWith('/') && !/^\/[/\\]/.test(raw) ? raw : '/robots'
 }
 </script>
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 const client = useFleetless()
-const route = useRoute()
 const password = ref('')
 const { state, problem, run } = useTokenPage(token => client.auth.confirmPasswordReset(token, password.value), '/auth/reset/done')
 const started = ref(false)
@@ -33,12 +32,7 @@ async function submit() {
         variant="subtle"
         :title="problem"
       />
-      <UButton
-        type="submit"
-        label="Set password"
-        block
-        :disabled="!route.params.token"
-      />
+      <UButton type="submit" label="Set password" block />
     </form>
     <p v-else-if="state === 'spent'" class="text-sm">
       This link has been used already, or it expired. Reset links live one hour.

@@ -50,12 +50,19 @@ async function submit(event: FormSubmitEvent<Schema>) {
 
 async function signInWith(slug: string) {
   problem.value = null
-  const request = await client.auth.beginOidcLogin({
-    slug,
-    redirectUri: `${window.location.origin}${props.redirectPath ?? '/auth/callback'}`
-  })
-  rememberOidc(request.state, request.codeVerifier)
-  window.location.assign(request.url)
+  try {
+    const request = await client.auth.beginOidcLogin({
+      slug,
+      redirectUri: `${window.location.origin}${props.redirectPath ?? '/auth/callback'}`
+    })
+    rememberOidc(request.state, request.codeVerifier)
+    window.location.assign(request.url)
+  } catch (error) {
+    // PKCE needs crypto.subtle, which an insecure origin does not have — a
+    // dev server opened at a LAN address over plain HTTP is the usual way in.
+    // Without this the button just does nothing.
+    problem.value = sentenceFor(error)
+  }
 }
 </script>
 

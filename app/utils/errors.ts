@@ -22,6 +22,18 @@ export function sentenceFor(error: unknown): string {
     case 'token_spent': return 'This link has been used already, or it expired.'
     case 'registration_closed': return 'This app does not take new accounts.'
     case 'domain_not_allowed': return 'Addresses at that domain cannot register here.'
+    // The rest of `clientOidcErrorCode`. These arrive on one screen only, the
+    // OIDC callback, where a bare code leaves the person with nothing to try.
+    case 'no_access': return 'This account has no access to this app.'
+    case 'email_taken': return 'That address already has an account here. Sign in with its password, or ask a developer to link the provider.'
+    case 'email_unverified': return 'The provider did not confirm that address. Verify it with the provider first.'
+    case 'idp_unavailable': return 'The identity provider did not answer.'
+    case 'exchange_failed': return 'The sign-in did not complete at the provider.'
+    case 'claims_incomplete': return 'The provider did not send an email address.'
+    case 'provider_misconfigured': return 'The provider is not set up correctly for this app.'
+    case 'provider_disabled': return 'That provider is switched off for this app.'
+    case 'invalid_request': return 'The sign-in request was malformed. Start again.'
+    case 'quota_exceeded': return 'This app has reached its user limit.'
     case 'weak_password': return 'That password is too short. Twelve characters or more.'
     case 'rate_limited': {
       const ms = typeof details?.retry_after_ms === 'number' ? details.retry_after_ms : 0

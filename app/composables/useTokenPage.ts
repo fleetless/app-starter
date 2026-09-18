@@ -21,6 +21,9 @@ export function useTokenPage(spend: (token: string) => Promise<void>, replaceWit
   const problem = ref<string | null>(null)
 
   async function run() {
+    // A second submit starts clean: the last sentence is not the new attempt's.
+    state.value = 'spending'
+    problem.value = null
     const token = typeof route.params.token === 'string' ? route.params.token : ''
     try {
       await spend(token)

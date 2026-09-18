@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import type { ClientMcpInteraction } from '@fleetless/sdk'
 import { sentenceFor } from '~/utils/errors'
-import { takeOidc } from '~/utils/oidc'
 
 definePageMeta({ layout: 'auth' })
 const client = useFleetless()
 const route = useRoute()
-const { identity, resolve, onSignedIn } = useSession()
+const { identity, resolve } = useSession()
 const { starter } = useAppConfig()
 
 const interaction = ref<ClientMcpInteraction | null>(null)
@@ -25,38 +24,12 @@ async function load() {
   }
 }
 
-/**
- * The provider buttons on this page come back here, not to /auth/callback:
- * the consent decision is what the person came for, and the shared callback
- * would drop the interaction on the floor. So this page spends the code
- * itself, the same exchange that page runs.
- */
-async function finishOidcReturn() {
-  const params = new URL(window.location.href).searchParams
-  if (!params.has('code') && !params.has('error')) return
-  const failure = client.auth.oidcErrorFromCallback(params)
-  const remembered = takeOidc()
-  // The code was single-use; the URL that carried it is not worth keeping.
-  window.history.replaceState({}, '', `/mcp/${id.value}`)
-  if (failure) {
-    problem.value = sentenceFor(failure)
-    return
-  }
-  try {
-    await client.auth.completeOidcLogin({
-      code: params.get('code') ?? '',
-      state: params.get('state') ?? '',
-      expectedState: remembered?.state ?? '',
-      codeVerifier: remembered?.verifier ?? ''
-    })
-    await onSignedIn()
-  } catch (error) {
-    problem.value = sentenceFor(error)
-  }
-}
-
 onMounted(async () => {
-  await finishOidcReturn()
+  // The provider buttons here come back to this page, not to /auth/callback:
+  // the consent decision is what the person came for, and the shared callback
+  // would drop the interaction on the floor.
+  const returned = await useOidcReturn(`/mcp/${id.value}`)
+  problem.value = returned.problem
   if (await resolve()) await load()
 })
 

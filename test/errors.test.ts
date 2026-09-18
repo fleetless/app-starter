@@ -16,6 +16,28 @@ describe('sentenceFor', () => {
     expect(sentenceFor(error)).toBe('The app is not set up for this yet: default_role_id is missing in the console.')
   })
 
+  it('answers every OIDC callback code with a sentence, never a bare code', () => {
+    // The twelve of `clientOidcErrorCode`; the callback page is the only screen
+    // they arrive on, and a raw identifier there tells nobody what to do next.
+    const table: [string, string][] = [
+      ['no_access', 'This account has no access to this app.'],
+      ['email_taken', 'That address already has an account here. Sign in with its password, or ask a developer to link the provider.'],
+      ['email_unverified', 'The provider did not confirm that address. Verify it with the provider first.'],
+      ['idp_unavailable', 'The identity provider did not answer.'],
+      ['exchange_failed', 'The sign-in did not complete at the provider.'],
+      ['claims_incomplete', 'The provider did not send an email address.'],
+      ['provider_misconfigured', 'The provider is not set up correctly for this app.'],
+      ['provider_disabled', 'That provider is switched off for this app.'],
+      ['invalid_request', 'The sign-in request was malformed. Start again.'],
+      ['quota_exceeded', 'This app has reached its user limit.'],
+      ['domain_not_allowed', 'Addresses at that domain cannot register here.'],
+      ['registration_closed', 'This app does not take new accounts.']
+    ]
+    for (const [code, sentence] of table) {
+      expect(sentenceFor(new FleetlessError(code, 'server text')), code).toBe(sentence)
+    }
+  })
+
   it('falls back to what did not happen, never to the server message', () => {
     expect(sentenceFor(new Error('ECONNREFUSED'))).toBe('The request did not go through.')
     expect(sentenceFor(new FleetlessError('some_new_code', 'server text'))).toBe('The request was refused (some_new_code).')
