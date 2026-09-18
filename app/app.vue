@@ -11,7 +11,7 @@ useHead({
     { key: 'theme-color', name: 'theme-color', content: color }
   ],
   link: [
-    { rel: 'icon', type: 'image/svg+xml', href: starter.brand.icon },
+    { rel: 'icon', type: 'image/svg+xml', href: starter.brand.favicon },
     { rel: 'icon', href: '/favicon.ico' }
   ],
   htmlAttrs: {
@@ -21,7 +21,7 @@ useHead({
 
 useSeoMeta({
   title: starter.name,
-  description: 'An app on Fleetless.'
+  description: starter.description
 })
 </script>
 

@@ -63,10 +63,14 @@ Then sign in. The robot appears; click it.
 
 ## 🎨 Make it yours
 
-- `app/app.config.ts` — the app's name, the two brand files, the primary
-  colour.
-- `public/brand/icon.svg` and `logo.svg` — replace both files, nothing else
-  reads them by another name.
+- `app/app.config.ts` — the app's name, its description, the four brand
+  files, the primary colour.
+- `public/brand/` — four files, replaced in place; nothing reads them by
+  another name. `icon-light.svg` and `logo-light.svg` are dark ink for a
+  light ground; `icon-dark.svg` and `logo-dark.svg` are light ink for a dark
+  one. The page picks by theme, because an `<img>` takes no colour from the
+  document around it. The favicon is the dark-ground icon for both tab
+  strips.
 - Add a page under `app/pages/`; the auth guard covers it. Add a tab to the
   robot page by extending `tabsFor` in `app/utils/datasheet.ts`.
 
