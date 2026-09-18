@@ -19,6 +19,9 @@ watch(fields, next => Object.assign(state, initialValues(next)))
 // `UForm` withholds the submit event while any error stands, so a parent-owned
 // error the parent can only clear on the next submit would lock the form
 // shut. The first edit makes the server's verdict stale, and it goes.
+// This watch compares `fieldErrors` by reference: a parent that mutates its
+// own array in place is never heard. Assign a new one — `fieldErrorsFrom`
+// returns one, and clearing means `[]`, not `length = 0`.
 const serverErrors = ref<{ name: string, message: string }[]>([])
 watch(() => props.fieldErrors, (next) => {
   serverErrors.value = next ?? []
