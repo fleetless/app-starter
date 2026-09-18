@@ -56,10 +56,13 @@ function submit() {
       :required="field.required"
     >
       <USwitch v-if="field.kind === 'boolean'" v-model="state[field.name] as boolean" />
+      <!-- Each option keeps its own type: the cloud checks `enum.includes`,
+           which is SameValueZero, so a stringified "2" is refused for an
+           integer enum and a numeric default matches no item. -->
       <USelect
         v-else-if="field.kind === 'enum'"
-        v-model="state[field.name] as string"
-        :items="(field.options ?? []).map(String)"
+        v-model="state[field.name] as string | number"
+        :items="(field.options ?? []).map(v => ({ label: String(v), value: v }))"
         class="w-full"
       />
       <UTextarea

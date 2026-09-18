@@ -79,3 +79,17 @@ describe('toParams', () => {
     })
   })
 })
+
+describe('an integer enum', () => {
+  const FIELDS = fieldsFrom({ type: 'object', properties: { level: { type: 'integer', enum: [1, 2, 3], default: 2 } } })
+
+  it('keeps a numeric default a number, so the pre-filled option is the selected one', () => {
+    expect(initialValues(FIELDS)).toEqual({ level: 2 })
+  })
+
+  it('sends the value rather than its label', () => {
+    // The cloud checks `enum.includes(value)`, which is SameValueZero: "2" is
+    // not 2, and a stringified option is refused on every submit.
+    expect(toParams(FIELDS, { level: 2 })).toEqual({ level: 2 })
+  })
+})
