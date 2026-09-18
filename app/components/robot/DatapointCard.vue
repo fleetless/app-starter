@@ -12,7 +12,17 @@ const historyOpen = ref(false)
 </script>
 
 <template>
-  <UCard class="cursor-pointer hover:bg-elevated/50" @click="historyOpen = true">
+  <!-- A div with a role, not `as="button"`: UCard wraps the slot in its own
+       divs, which a real <button> may not contain. -->
+  <UCard
+    role="button"
+    tabindex="0"
+    aria-haspopup="dialog"
+    class="cursor-pointer hover:bg-elevated/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    @click="historyOpen = true"
+    @keydown.enter.prevent="historyOpen = true"
+    @keydown.space.prevent="historyOpen = true"
+  >
     <div class="flex flex-col gap-1">
       <div class="flex items-baseline justify-between gap-2">
         <span class="font-mono text-sm text-muted truncate">{{ exposure.slug }}</span>

@@ -7,6 +7,9 @@ const props = defineProps<{ robotId: string, exposure: McpExposure }>()
 const open = defineModel<boolean>('open', { default: false })
 const client = useFleetless()
 const { onError } = useRobotSheet()
+const colorMode = useColorMode()
+
+const CHART_HEIGHT = 240
 
 const RANGES = [
   { label: 'Last hour', from: 'now-1h' },
@@ -14,21 +17,42 @@ const RANGES = [
   { label: 'Last 24 hours', from: 'now-24h' }
 ]
 const from = ref(RANGES[0]!.from)
-const problem = ref<string | null>(null)
-const points = ref(0)
-// Samples received against points plotted: a non-numeric datapoint records
-// fine and charts not at all, which is not the same as a quiet window.
-const received = ref(0)
-// The platform caps a read by rows or by bytes; a short series that does not
-// admit it looks exactly like a quiet period.
-const truncated = ref(false)
+
+/**
+ * What the modal has to say, as one value: two states can then never claim the
+ * same window, and "the page absorbed the refusal" is not "the window was quiet".
+ */
+type Outcome
+  = | { kind: 'loading' }
+    | { kind: 'chart', truncated: boolean }
+    | { kind: 'empty' }
+    | { kind: 'unchartable' }
+    | { kind: 'problem', sentence: string }
+    // `refused`: the page took the refusal and is re-reading the sheet, so this
+    // card is on its way out and the modal says nothing at all.
+    | { kind: 'refused' }
+
+const outcome = ref<Outcome>({ kind: 'loading' })
 const container = ref<HTMLDivElement | null>(null)
+const probePrimary = ref<HTMLElement | null>(null)
+const probeText = ref<HTMLElement | null>(null)
+const probeGrid = ref<HTMLElement | null>(null)
+
 let plot: uPlot | null = null
+let data: [number[], number[]] = [[], []]
+// Only the newest range may draw: a slower earlier read resolving last would
+// leave a chart under a select that names a different window.
+let requests = 0
+let observer: ResizeObserver | null = null
+let lastWidth = 0
 
 async function load() {
-  problem.value = null
+  const seq = ++requests
+  outcome.value = { kind: 'loading' }
+  destroy()
   try {
     const page = await client.datapoints.history(props.robotId, props.exposure.slug, { from: from.value, limit: 2000 })
+    if (seq !== requests) return
     const xs: number[] = []
     const ys: number[] = []
     for (const sample of page.samples) {
@@ -38,51 +62,97 @@ async function load() {
       xs.push(sample.timestamp_ms)
       ys.push(sample.value)
     }
-    received.value = page.samples.length
-    points.value = xs.length
-    truncated.value = page.truncated
-    draw([xs, ys])
+    data = [xs, ys]
+    if (xs.length === 0) {
+      outcome.value = page.samples.length > 0 ? { kind: 'unchartable' } : { kind: 'empty' }
+      return
+    }
+    outcome.value = { kind: 'chart', truncated: page.truncated }
+    // The container renders for a chart and nothing else, so it exists one tick on.
+    await nextTick()
+    if (seq === requests) draw()
   } catch (error) {
-    // Destroy first: an error over the previous range's chart reads as if that
-    // chart were the answer.
-    plot?.destroy()
-    plot = null
-    points.value = 0
-    received.value = 0
-    problem.value = await onError(error)
+    if (seq !== requests) return
+    data = [[], []]
+    const sentence = await onError(error)
+    if (seq !== requests) return
+    outcome.value = sentence === null ? { kind: 'refused' } : { kind: 'problem', sentence }
   }
 }
 
-function draw(data: [number[], number[]]) {
-  if (!container.value) return
-  plot?.destroy()
+/**
+ * uPlot hands `stroke` straight to the canvas, which knows nothing about CSS
+ * variables, and its own default axis stroke is black — unreadable on a dark
+ * surface. So read colours off three probe spans, where `color` has already
+ * computed to something a canvas accepts, and follow the theme for free.
+ */
+function palette() {
+  const read = (el: HTMLElement | null, fallback: string) => (el && getComputedStyle(el).color) || fallback
+  return {
+    primary: read(probePrimary.value, '#00c16a'),
+    text: read(probeText.value, '#71717a'),
+    grid: read(probeGrid.value, '#a1a1aa')
+  }
+}
+
+function draw() {
+  const el = container.value
+  if (!el) return
+  destroy()
+  const colours = palette()
+  const axis = { stroke: colours.text, grid: { stroke: colours.grid }, ticks: { stroke: colours.grid } }
+  lastWidth = el.clientWidth
   plot = new uPlot({
-    width: container.value.clientWidth,
-    height: 240,
+    width: lastWidth,
+    height: CHART_HEIGHT,
     // Milliseconds on the x axis: `time: true` AND `ms: 1` together.
     ms: 1,
     scales: { x: { time: true } },
     legend: { show: false },
-    axes: [{}, { label: props.exposure.unit ?? undefined }],
-    series: [{}, { stroke: 'var(--ui-primary)', width: 2 }]
-  }, data, container.value)
+    axes: [{ ...axis }, { ...axis, label: props.exposure.unit ?? undefined }],
+    series: [{}, { stroke: colours.primary, width: 2 }]
+  }, data, el)
+
+  // uPlot sizes its canvas once. Without this, a rotated phone keeps the width
+  // the modal had when it opened.
+  observer = new ResizeObserver(() => {
+    const width = el.clientWidth
+    if (!plot || width === 0 || width === lastWidth) return
+    lastWidth = width
+    plot.setSize({ width, height: CHART_HEIGHT })
+  })
+  observer.observe(el)
+}
+
+function destroy() {
+  observer?.disconnect()
+  observer = null
+  plot?.destroy()
+  plot = null
 }
 
 watch(open, async (isOpen) => {
   if (isOpen) {
-    // The modal body mounts with the overlay, so the container exists only after this tick.
+    // The modal body mounts with the overlay, so the probes and the container
+    // exist only after this tick.
     await nextTick()
     await load()
   } else {
-    plot?.destroy()
-    plot = null
+    // Nobody may read this chart again; the next open reads its own window.
+    requests++
+    destroy()
   }
 })
 watch(from, load)
-onBeforeUnmount(() => {
-  plot?.destroy()
-  plot = null
+
+// The tokens flip with the theme, and the canvas has already been painted.
+watch(() => colorMode.value, async () => {
+  if (outcome.value.kind !== 'chart') return
+  await nextTick()
+  draw()
 })
+
+onBeforeUnmount(destroy)
 </script>
 
 <template>
@@ -92,29 +162,39 @@ onBeforeUnmount(() => {
     :description="exposure.description ?? undefined"
   >
     <template #body>
-      <!-- The card behind this opens the modal on click; a click inside must not re-open it. -->
-      <div class="flex flex-col gap-3" @click.stop>
+      <div class="flex flex-col gap-3">
+        <!-- Probes, not CSS variables: `color` computes to a real colour, and a
+             canvas cannot resolve `var(--ui-primary)` for itself. -->
+        <span ref="probePrimary" class="hidden text-primary" />
+        <span ref="probeText" class="hidden text-muted" />
+        <span ref="probeGrid" class="hidden text-dimmed" />
+
         <USelect
           v-model="from"
           :items="RANGES.map(r => ({ label: r.label, value: r.from }))"
           class="w-48"
         />
         <UAlert
-          v-if="problem"
+          v-if="outcome.kind === 'problem'"
           color="error"
           variant="subtle"
-          :title="problem"
+          :title="outcome.sentence"
         />
-        <p v-else-if="received > 0 && points === 0" class="text-sm text-muted">
+        <p v-else-if="outcome.kind === 'loading'" class="text-sm text-dimmed">
+          Reading the recorded window.
+        </p>
+        <p v-else-if="outcome.kind === 'unchartable'" class="text-sm text-muted">
           Recorded, but not as numbers. There is no chart for this one.
         </p>
-        <p v-else-if="points === 0" class="text-sm text-muted">
+        <p v-else-if="outcome.kind === 'empty'" class="text-sm text-muted">
           Nothing recorded in this window. Try a longer one.
         </p>
-        <p v-else-if="truncated" class="text-xs text-dimmed">
-          Cut short by the platform's read cap. The window holds more than this.
-        </p>
-        <div ref="container" class="w-full" />
+        <template v-else-if="outcome.kind === 'chart'">
+          <p v-if="outcome.truncated" class="text-xs text-dimmed">
+            Cut short by the platform's read cap. The window holds more than this.
+          </p>
+          <div ref="container" class="w-full" />
+        </template>
       </div>
     </template>
   </UModal>
