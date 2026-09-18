@@ -1,0 +1,6 @@
+{
+  // Nuxt's generated project covers `app/**` only, so `pnpm typecheck` runs a
+  // second pass over this directory with the same aliases and auto-imports.
+  "extends": "../.nuxt/tsconfig.app.json",
+  "include": ["../.nuxt/nuxt.d.ts", "**/*.ts"]
+}
