@@ -1,6 +1,6 @@
 # 🤖 Set it up with an agent
 
-The five console steps in the README are also seven tool calls. Paste the
+The five console steps in the README are also nine tool calls, one more per extra robot. Paste the
 prompt below into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
@@ -31,7 +31,7 @@ You are setting up a Fleetless app for the app-starter template using the Fleetl
 
 2. Create the app with console_app_create: name, identifier and the chosen robot_ids. Keep the app id.
 
-3. Read the auth configuration with console_app_auth_config_get, then write it back completely with console_app_auth_config_put, changing only these fields:
+3. Read the auth configuration with console_app_auth_config_get, then write it back completely with console_app_auth_config_put — every field the put accepts, which is the read minus oidc_callback_url and updated_at — changing only these:
    - allowed_origins: the origin from (c), bare — scheme, host and port, no path, no trailing slash
    - verify_url: <origin>/auth/verify/{token}
    - reset_url: <origin>/auth/reset/{token}
@@ -40,7 +40,7 @@ You are setting up a Fleetless app for the app-starter template using the Fleetl
    - mcp_enabled: true
    Leave self_registration and allowed_domains as they are.
 
-4. Create a role named "Operator" with console_role_create. For every attached robot call console_robot_exposures and collect its slugs. Then call console_role_permissions_put once, with one grant per robot carrying all of that robot's slugs, and the capabilities action_history, presence and assets all true. A robot with no exposures gets no grant; note it for the report.
+4. Create a role named "Operator" with console_role_create and keep its id. For every attached robot call console_robot_exposures and collect its slugs. Then call console_role_permissions_put once, with one grant per robot carrying all of that robot's slugs, and the capabilities action_history, presence and assets all true. A robot with no exposures gets no grant; note it for the report.
 
 5. Make that role the app's default with console_app_update, default_role_id.
 
