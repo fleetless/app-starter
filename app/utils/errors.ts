@@ -52,6 +52,9 @@ export function sentenceFor(error: unknown): string {
     case 'parameter_invalid':
     case 'validation_error': return 'A value was refused.'
     case 'no_snapshot_yet': return 'No snapshot has been captured yet.'
+    // Live-only, not empty: the fix is to switch recording on in the console,
+    // not to look at another window.
+    case 'not_recorded': return 'Nothing is recorded for this datapoint.'
     case 'camera_offline': return 'The camera is offline.'
     case 'interaction_expired': return 'This sign-in request is no longer valid.'
     case 'state_mismatch': return 'The sign-in did not come back the way it left. Start again.'

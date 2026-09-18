@@ -38,6 +38,10 @@ describe('sentenceFor', () => {
     }
   })
 
+  it('says a live-only datapoint is not recorded, rather than empty', () => {
+    expect(sentenceFor(new FleetlessError('not_recorded', 'live only'))).toBe('Nothing is recorded for this datapoint.')
+  })
+
   it('falls back to what did not happen, never to the server message', () => {
     expect(sentenceFor(new Error('ECONNREFUSED'))).toBe('The request did not go through.')
     expect(sentenceFor(new FleetlessError('some_new_code', 'server text'))).toBe('The request was refused (some_new_code).')
