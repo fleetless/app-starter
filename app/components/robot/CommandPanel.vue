@@ -7,6 +7,7 @@ const client = useFleetless()
 const { onError } = useRobotSheet()
 
 const busy = ref(false)
+const cancelling = ref(false)
 const problem = ref<string | null>(null)
 const fieldErrors = ref<{ name: string, message: string }[]>([])
 const result = ref<unknown>(undefined)
@@ -45,11 +46,17 @@ async function submit(params: Record<string, unknown>) {
   }
 }
 
+// Busy while it waits: every click here is a real ROS goal cancel, and the
+// sentence from a failed submit has nothing to say about this one.
 async function cancel() {
+  cancelling.value = true
+  problem.value = null
   try {
     await client.actions.cancel(props.robotId, props.exposure.slug, job?.event.value?.job.id ?? null)
   } catch (error) {
     problem.value = await onError(error)
+  } finally {
+    cancelling.value = false
   }
 }
 </script>
@@ -93,6 +100,7 @@ async function cancel() {
           size="xs"
           color="error"
           variant="outline"
+          :loading="cancelling"
           @click="cancel"
         />
       </div>

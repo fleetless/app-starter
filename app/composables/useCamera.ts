@@ -25,10 +25,14 @@ export function useCamera(robotId: string, slug: string, videoEl: Ref<HTMLVideoE
   let room: Room | null = null
   let session: CameraLiveSession | null = null
   let stoppingDeliberately = false
+  let disposed = false
 
   async function refreshSnapshot() {
     try {
       const snapshot = await client.cameras.snapshot(robotId, slug)
+      // The scope can go while this is in flight. An object URL created now
+      // is one nobody will read and nobody will revoke.
+      if (disposed) return
       snapshotAgeMs.value = snapshot.age_ms
       if (snapshot.image) {
         if (snapshotUrl.value) URL.revokeObjectURL(snapshotUrl.value)
@@ -38,7 +42,8 @@ export function useCamera(robotId: string, slug: string, videoEl: Ref<HTMLVideoE
       }
       snapshotProblem.value = null
     } catch (error) {
-      snapshotProblem.value = await refuse(error)
+      const sentence = await refuse(error)
+      if (!disposed) snapshotProblem.value = sentence
     }
   }
   const { pause, resume } = useIntervalFn(refreshSnapshot, 5000, { immediate: false })
@@ -62,8 +67,11 @@ export function useCamera(robotId: string, slug: string, videoEl: Ref<HTMLVideoE
     next.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
       if (track.kind === Track.Kind.Video && !stoppingDeliberately) void stopLive('ended')
     })
+    // Not just a state flip: a room that drops before any video track was
+    // subscribed — the robot was not publishing yet — fires this and nothing
+    // else, and the hold would outlive the room the SFU counts it by.
     next.on(RoomEvent.Disconnected, () => {
-      if (liveState.value === 'live') liveState.value = 'idle'
+      if (!stoppingDeliberately) void stopLive('ended')
     })
     try {
       await next.connect(session.url, session.token)
@@ -72,10 +80,18 @@ export function useCamera(robotId: string, slug: string, videoEl: Ref<HTMLVideoE
     } catch (error) {
       // The hold is real even though joining failed — release it. `release()`
       // is documented never to reject, so none of these awaits needs a catch.
-      liveProblem.value = sentenceFor(error)
-      await next.disconnect()
-      await session.release()
+      // The flag is this path's too: without it the Disconnected handler above
+      // would reach the session first and overwrite why the join failed.
+      const joining = session
       session = null
+      liveProblem.value = sentenceFor(error)
+      stoppingDeliberately = true
+      try {
+        await next.disconnect()
+      } finally {
+        stoppingDeliberately = false
+      }
+      await joining?.release()
       liveState.value = 'idle'
     }
   }
@@ -101,6 +117,7 @@ export function useCamera(robotId: string, slug: string, videoEl: Ref<HTMLVideoE
     resume()
   })
   onScopeDispose(() => {
+    disposed = true
     pause()
     if (snapshotUrl.value) URL.revokeObjectURL(snapshotUrl.value)
     if (room || session) void stopLive()
