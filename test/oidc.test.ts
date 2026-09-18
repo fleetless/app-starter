@@ -10,6 +10,12 @@ describe('the OIDC round trip memory', () => {
     expect(takeOidc()).toBeNull()
   })
 
+  it('carries where the sign-in was headed, and drops it with the rest', () => {
+    rememberOidc('state-1', 'verifier-1', '/robots/abc')
+    expect(takeOidc()).toEqual({ state: 'state-1', verifier: 'verifier-1', next: '/robots/abc' })
+    expect(takeOidc()).toBeNull()
+  })
+
   it('answers null when nothing was remembered', () => {
     expect(takeOidc()).toBeNull()
   })

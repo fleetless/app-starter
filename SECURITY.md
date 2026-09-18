@@ -39,7 +39,8 @@ store:
 `beginOidcLogin` and the redirect back, under the key `fleetless-oidc`, and
 `useOidcReturn` (`app/composables/useOidcReturn.ts`) consumes them exactly
 once — `takeOidc()` removes the entry before the exchange runs, so a replayed
-callback URL finds nothing to replay against.
+callback URL finds nothing to replay against. The destination to return to
+rides along under the same key and is guarded on the way out.
 
 In scope: a path that reads or exchanges the remembered pair more than once;
 a path that reaches `completeOidcLogin` without `takeOidc()` having run first;
@@ -49,12 +50,15 @@ empty string, which is what makes two absent values fail to compare equal.
 ### The `next` redirect
 
 `app/middleware/auth.global.ts` and `app/pages/auth/login.vue` pass the page a
-visitor was on through `?next=` and return there after sign-in. The check in
-`login.vue`'s `next()` accepts only a path starting with a single `/` — no
-`//host` and no `/\host`, both of which a browser can read as a different
-origin. A report is in scope if any value reaches `navigateTo()` from this
-parameter without passing that check, or if the check itself accepts a value
-it should not.
+visitor was on through `?next=` and return there after sign-in; a provider
+sign-in carries it through `sessionStorage` rather than the redirect URI,
+which the provider matches exactly. The check is `safeNext()` in
+`app/utils/routes.ts`, and it accepts only a path starting with a single `/` —
+no `//host` and no `/\host`, whitespace between the separators included, all
+of which a browser can read as a different origin. It runs on the query
+parameter and again on what comes back out of the store. A report is in scope
+if any value reaches `navigateTo()` from this parameter without passing that
+check, or if the check itself accepts a value it should not.
 
 ## What is not in scope
 

@@ -24,7 +24,7 @@ async function disconnect(grant: McpConsentGrant) {
     await client.auth.revokeMcpGrant(grant.client_id)
     await load()
   } catch (error) {
-    problem.value = sentenceFor(error)
+    if (!(await expire(error, '/account/connections'))) problem.value = sentenceFor(error)
   }
 }
 

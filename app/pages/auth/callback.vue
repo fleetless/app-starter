@@ -6,7 +6,7 @@ const problem = ref<string | null>(null)
 onMounted(async () => {
   const returned = await useOidcReturn('/auth/callback')
   if (returned.signedIn) {
-    await navigateTo('/robots')
+    await navigateTo(returned.next)
     return
   }
   // No code, no error: this page is only ever a destination for a provider,

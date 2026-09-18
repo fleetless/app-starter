@@ -8,6 +8,8 @@ import { rememberOidc } from '~/utils/oidc'
 const props = defineProps<{
   /** Where the OIDC round trip returns to. Defaults to this app's callback page. */
   redirectPath?: string
+  /** Where to land after a provider sign-in. Already guarded by the caller. */
+  next?: string
 }>()
 const emit = defineEmits<{ signedIn: [] }>()
 
@@ -55,7 +57,12 @@ async function signInWith(slug: string) {
       slug,
       redirectUri: `${window.location.origin}${props.redirectPath ?? '/auth/callback'}`
     })
-    rememberOidc(request.state, request.codeVerifier)
+    // The destination travels in the store, not in the redirect URI, which
+    // the provider matches exactly.
+    if (!rememberOidc(request.state, request.codeVerifier, props.next)) {
+      problem.value = 'This browser refused to keep the sign-in state.'
+      return
+    }
     window.location.assign(request.url)
   } catch (error) {
     // PKCE needs crypto.subtle, which an insecure origin does not have — a

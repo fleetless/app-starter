@@ -1,11 +1,14 @@
 import { sentenceFor } from '~/utils/errors'
 import { takeOidc } from '~/utils/oidc'
+import { safeNext } from '~/utils/routes'
 
 export interface OidcReturn {
   /** True only when the exchange ran and a session is stored. */
   signedIn: boolean
   /** The one sentence to show, or null when there is nothing to say. */
   problem: string | null
+  /** Where the sign-in was headed before the detour, guarded. */
+  next: string
 }
 
 /**
@@ -27,12 +30,15 @@ export async function useOidcReturn(replaceWith: string): Promise<OidcReturn> {
   const params = new URL(window.location.href).searchParams
   // Nothing came back with this browser, so nothing is spent — a plain visit
   // must not consume the remembered pair.
-  if (!params.has('code') && !params.has('error')) return { signedIn: false, problem: null }
+  if (!params.has('code') && !params.has('error')) return { signedIn: false, problem: null, next: '/robots' }
 
   const failure = client.auth.oidcErrorFromCallback(params)
   const remembered = takeOidc()
+  // Guarded here rather than where it was written: what comes back out of the
+  // store is as much a stranger's string as the query parameter was.
+  const next = safeNext(remembered?.next)
   window.history.replaceState({}, '', replaceWith)
-  if (failure) return { signedIn: false, problem: sentenceFor(failure) }
+  if (failure) return { signedIn: false, problem: sentenceFor(failure), next }
 
   try {
     await client.auth.completeOidcLogin({
@@ -42,8 +48,8 @@ export async function useOidcReturn(replaceWith: string): Promise<OidcReturn> {
       codeVerifier: remembered?.verifier ?? ''
     })
     await onSignedIn()
-    return { signedIn: true, problem: null }
+    return { signedIn: true, problem: null, next }
   } catch (error) {
-    return { signedIn: false, problem: sentenceFor(error) }
+    return { signedIn: false, problem: sentenceFor(error), next }
   }
 }
