@@ -15,9 +15,21 @@ const fields = computed(() => fieldsFrom(props.schema))
 const state = reactive<Record<string, unknown>>(initialValues(fields.value))
 watch(fields, next => Object.assign(state, initialValues(next)))
 
+// The parent's refusals, held here because they have to expire on their own:
+// `UForm` withholds the submit event while any error stands, so a parent-owned
+// error the parent can only clear on the next submit would lock the form
+// shut. The first edit makes the server's verdict stale, and it goes.
+const serverErrors = ref<{ name: string, message: string }[]>([])
+watch(() => props.fieldErrors, (next) => {
+  serverErrors.value = next ?? []
+}, { immediate: true })
+watch(state, () => {
+  serverErrors.value = []
+}, { deep: true })
+
 const validate = (values: Record<string, unknown>): FormError[] => [
   ...validateValues(fields.value, values),
-  ...(props.fieldErrors ?? [])
+  ...serverErrors.value
 ]
 
 function submit() {

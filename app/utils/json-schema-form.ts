@@ -61,6 +61,14 @@ export function initialValues(fields: FieldSpec[]): Record<string, unknown> {
 
 const isEmpty = (value: unknown) => value === '' || value === undefined || value === null
 
+function compile(pattern: string): RegExp | null {
+  try {
+    return new RegExp(pattern)
+  } catch {
+    return null
+  }
+}
+
 export function validateValues(fields: FieldSpec[], values: Record<string, unknown>): { name: string, message: string }[] {
   const errors: { name: string, message: string }[] = []
   for (const field of fields) {
@@ -77,8 +85,12 @@ export function validateValues(fields: FieldSpec[], values: Record<string, unkno
       else if (field.kind === 'integer' && !Number.isInteger(n)) errors.push({ name: field.name, message: 'A whole number.' })
       else if (field.min !== undefined && n < field.min) errors.push({ name: field.name, message: `At least ${field.min}.` })
       else if (field.max !== undefined && n > field.max) errors.push({ name: field.name, message: `At most ${field.max}.` })
-    } else if (field.kind === 'string' && field.pattern && !new RegExp(field.pattern).test(String(value))) {
-      errors.push({ name: field.name, message: `Must match ${field.pattern}.` })
+    } else if (field.kind === 'string' && field.pattern) {
+      // A pattern the cloud accepts but JavaScript cannot compile — a Python
+      // named group, say — is checked by the cloud instead, whose
+      // `parameter_invalid` reaches the field through `fieldErrors`.
+      const pattern = compile(field.pattern)
+      if (pattern && !pattern.test(String(value))) errors.push({ name: field.name, message: `Must match ${field.pattern}.` })
     } else if (field.kind === 'json') {
       try {
         JSON.parse(String(value))

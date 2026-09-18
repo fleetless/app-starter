@@ -41,6 +41,11 @@ describe('initialValues', () => {
   it('pre-fills defaults and leaves the rest empty', () => {
     expect(initialValues(fieldsFrom(SCHEMA))).toEqual({ order: '', speed: 0.5, mode: '', label: '', armed: false, pose: '' })
   })
+
+  it('pre-fills a json field from its default as text', () => {
+    const fields = fieldsFrom({ type: 'object', properties: { pose: { type: 'object', default: { x: 1 } } } })
+    expect(initialValues(fields)).toEqual({ pose: '{"x":1}' })
+  })
 })
 
 describe('validateValues', () => {
@@ -50,6 +55,11 @@ describe('validateValues', () => {
       { name: 'order', message: 'Required.' },
       { name: 'speed', message: 'At most 1.' }
     ])
+  })
+
+  it('skips a pattern JavaScript cannot compile, instead of throwing', () => {
+    const fields = fieldsFrom({ type: 'object', properties: { tag: { type: 'string', pattern: '(?P<x>a)' } } })
+    expect(validateValues(fields, { tag: 'zzz' })).toEqual([])
   })
 
   it('checks a pattern and a json field only when they carry something', () => {
