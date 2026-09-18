@@ -35,6 +35,11 @@ attack on your dev server; localhost and plain IP addresses need no entry.
 
 ## 🧭 Set it up in the console
 
+**Or let an agent do it.** [`AGENT-SETUP.md`](AGENT-SETUP.md) is a prompt to
+paste into an MCP client connected to `https://mcp.fleetless.dev`; it performs
+every step below and reports the `.env` line and the invitation. The steps
+stay here for the person who wants to see each setting.
+
 Five settings, in this order. Each names the refusal you see without it, so
 you can tell a missing setting from a broken app.
 
