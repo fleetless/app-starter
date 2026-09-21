@@ -47,7 +47,7 @@ const size = (bytes: number) => bytes < 1024 * 1024 ? `${Math.round(bytes / 1024
 <template>
   <div class="flex flex-col gap-3">
     <p class="text-sm text-muted">
-      The robot's URDF, its meshes and textures. Rendering them in 3D is the Live 3D recipe at docs.fleetless.dev/recipes/live-3d/.
+      The robot's URDF, its meshes and textures. Rendering them in 3D is covered at docs.fleetless.dev/concepts/exposure/#urdf-meshes.
     </p>
     <UAlert
       v-if="problem"

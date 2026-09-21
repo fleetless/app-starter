@@ -98,9 +98,9 @@ Then sign in. The robot appears; click it.
 | `app/utils/errors.ts` | Every refusal's one sentence. |
 
 The SDK reference at [docs.fleetless.dev](https://docs.fleetless.dev/reference/sdk/)
-is the reference for everything this app calls; the
-[app-auth recipe](https://docs.fleetless.dev/recipes/app-auth/) walks the
-auth pages call by call.
+is the reference for everything this app calls; [manage users and
+roles](https://docs.fleetless.dev/concepts/manage-users-and-roles/) explains
+the model and the refusals behind `app/pages/auth/*`.
 
 ## 🧪 Checks
 
