@@ -45,11 +45,11 @@ you can tell a missing setting from a broken app.
 
 1. **Create an app** on the Apps page. Its identifier goes into `.env` as
    `NUXT_PUBLIC_APP_IDENTIFIER`. (Without it: every call answers `not_found`.)
-2. **Auth tab.** `allowed_origins`: `http://localhost:3000`, a bare origin, no
-   path, no trailing slash. (Without it: every call fails as a network error
-   with no status and no body — the browser refuses the answer before your
-   code sees it.) Then the three token URLs and the MCP one, each pointing
-   into this app:
+2. **Registration page.** `allowed_origins`: `http://localhost:3000`, a bare
+   origin, no path, no trailing slash. (Without it: every call fails as a
+   network error with no status and no body — the browser refuses the answer
+   before your code sees it.) Then, on **App URLs** and **MCP**, the three
+   token URLs and the MCP one, each pointing into this app:
 
    | Setting | Value |
    |---|---|
@@ -58,14 +58,14 @@ you can tell a missing setting from a broken app.
    | `invite_url` | `http://localhost:3000/auth/invite/{token}` |
    | `mcp_login_url` | `http://localhost:3000/mcp/{interaction}` (with `mcp_enabled` on) |
 
-3. **Settings tab.** `default_role_id`: the role a self-registered account
+3. **Settings page.** `default_role_id`: the role a self-registered account
    gets. (Without it: registration answers `target_state_conflict`.)
-4. **Roles tab.** Tick datapoints, actions, services, publishers and cameras
+4. **Roles page.** Tick datapoints, actions, services, publishers and cameras
    for the role, and the `action_history` and `assets` capabilities if the
    Activity and Assets tabs should exist. A new role grants nothing.
    (Without it: sign-in works and the robot list is empty.)
 5. **Attach a robot** to the app on its page, and **create or invite an app
-   user** on the Users tab. That user's email and password sign in here. Your
+   user** on the Users page. That user's email and password sign in here. Your
    own console login will not: it is a Fleetless user, a different identity
    space.
 
