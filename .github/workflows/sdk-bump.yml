@@ -1,0 +1,104 @@
+# sdk leads, app-starter follows (spec "app-starter"): a released
+# @fleetless/sdk opens the pull request that pins it here, exactly. Its CI
+# shows whether the template still builds against it. It does not merge
+# itself — a major can need code changes, so a person or an agent merges it.
+#
+# Sent by sdk's release.yml as a `repository_dispatch` of type `sdk-release`
+# carrying `version`; run by hand with the same input to re-pin on purpose.
+#
+# The version is waited for until npm serves its tarball, not merely lists it:
+# npm's metadata runs minutes ahead of the tarball, and a lockfile written in
+# that gap fails every install after it.
+name: sdk-bump
+
+on:
+  repository_dispatch:
+    types: [sdk-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: the @fleetless/sdk version to pin, X.Y.Z
+        type: string
+        required: true
+
+concurrency:
+  group: sdk-bump
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: which version
+        id: version
+        env:
+          DISPATCHED: ${{ github.event.client_payload.version }}
+          ASKED: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${DISPATCHED:-$ASKED}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "'$version' is not X.Y.Z" >&2; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          # No persisted credential: the push below goes up as the App, so
+          # that the pull request's CI runs.
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.FLEETLESS_APP_ID }}
+          private-key: ${{ secrets.FLEETLESS_APP_PRIVATE_KEY }}
+          owner: fleetless
+          repositories: app-starter
+          permission-contents: write
+          permission-pull-requests: write
+      - name: npm serves it
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node .github/release/release.mjs npm-wait --package @fleetless/sdk --version "$VERSION"
+      - name: the pull request
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          branch="deps/sdk-$VERSION"
+          if [ -n "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq '.[].number')" ]; then
+            echo "a pull request for $branch is already open"; exit 0
+          fi
+          have="$(node -p 'require("./package.json").dependencies["@fleetless/sdk"]')"
+          if [ "$have" = "$VERSION" ]; then
+            echo "@fleetless/sdk is already pinned at $VERSION"; exit 0
+          fi
+          git switch -q -c "$branch"
+          node -e '
+            const fs = require("fs")
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"))
+            pkg.dependencies["@fleetless/sdk"] = process.env.VERSION
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n")'
+          # The release-age cooldown refuses a version younger than it; the
+          # exclude entry for the pinned sdk moves with the pin.
+          sed -i -E "s#'@fleetless/sdk@[^']*'#'@fleetless/sdk@$VERSION'#" pnpm-workspace.yaml
+          grep -q "'@fleetless/sdk@$VERSION'" pnpm-workspace.yaml \
+            || { echo "pnpm-workspace.yaml has no @fleetless/sdk entry under minimumReleaseAgeExclude to move" >&2; exit 1; }
+          corepack enable
+          pnpm install --no-frozen-lockfile
+          node .github/release/release.mjs changelog-add --file CHANGELOG.md --line "\`@fleetless/sdk\` $VERSION."
+          git -c user.name="fleetless-release[bot]" -c user.email="fleetless-release[bot]@users.noreply.github.com" \
+            commit -q -am "fix(deps): @fleetless/sdk $VERSION"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          GIT_CONFIG_COUNT=1 \
+          GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+          GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+            git push -q --force origin "HEAD:refs/heads/$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --head "$branch" --base main \
+            --title "fix(deps): @fleetless/sdk $VERSION" \
+            --body "@fleetless/sdk $VERSION was released; this pins it exactly. CI says whether the template still builds against it. A major can need code changes, so this is merged by hand, not by the workflow."

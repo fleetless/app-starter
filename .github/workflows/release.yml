@@ -1,0 +1,184 @@
+# Release: this repository's `main`, as the next version (spec
+# docs/superpowers/specs/2026-09-23-per-repo-release-design.md in
+# fleetless/fleetless).
+#
+# Press "Run workflow" on main. The version comes from the Conventional
+# Commits since the last tag (.github/release/release.mjs); the first is
+# 1.0.0. CHANGELOG.md's "## [Unreleased]" becomes that version in a pull
+# request, which runs the required `verify` check — this release's verify —
+# and merges itself. The merge commit is tagged, and the GitHub release
+# carries that version's notes. Nothing is built or deployed: a template's
+# release is its changelog and its tag.
+#
+# A run that failed can be started again: an open release PR is reused, a
+# merged release commit is tagged, a tag already on HEAD continues that
+# release, and an existing GitHub release is left alone.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: auto, from the commits; an override only raises it
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tagged: ${{ steps.version.outputs.tagged }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: main, and nothing but main
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF" = refs/heads/main ] || { echo "Release runs on main, not $GITHUB_REF" >&2; exit 1; }
+          git fetch -q origin main
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main moved after this run started; run it again" >&2; exit 1; }
+      - name: the version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          tag="$(node .github/release/release.mjs tag-at-head)"
+          if [ -n "$tag" ]; then
+            echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD already carries $tag: continuing that release"
+            exit 0
+          fi
+          version="$(node .github/release/release.mjs next --bump "$BUMP" --first 1.0.0)"
+          # The changelog is refused here, on a copy, before a branch or a
+          # pull request exists: an empty Unreleased is a release without notes.
+          cp CHANGELOG.md "$RUNNER_TEMP/CHANGELOG.md"
+          node .github/release/release.mjs rotate --file "$RUNNER_TEMP/CHANGELOG.md" --version "$version" --date "$(date -u +%F)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tagged=false" >> "$GITHUB_OUTPUT"
+
+  release-commit:
+    needs: prepare
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.commit.outputs.commit }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      TAGGED: ${{ needs.prepare.outputs.tagged }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          # A persisted checkout credential is a URL-scoped extraheader that
+          # beats the one the push below brings, and the branch would go up as
+          # github-actions[bot] — a push that starts no workflow, so the
+          # release PR would never get its required check.
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.FLEETLESS_APP_ID }}
+          private-key: ${{ secrets.FLEETLESS_APP_PRIVATE_KEY }}
+          owner: fleetless
+          repositories: app-starter
+          permission-contents: write
+          permission-pull-requests: write
+          # merge-pr polls the release PR's check runs.
+          permission-checks: read
+      - name: the release commit, through a pull request
+        id: commit
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          if [ "$TAGGED" = true ]; then
+            echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Merged by an earlier run that died before the tag: tag that commit.
+          merged="$(node .github/release/release.mjs release-commit --version "$VERSION")"
+          if [ -n "$merged" ]; then
+            echo "commit=$merged" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          branch="release/$VERSION"
+          number="$(node .github/release/release.mjs release-pr --version "$VERSION" --branch "$branch" --find-only)"
+          if [ -z "$number" ]; then
+            git switch -q -c "$branch"
+            node .github/release/release.mjs rotate --file CHANGELOG.md --version "$VERSION" --date "$(date -u +%F)"
+            git -c user.name="fleetless-release[bot]" -c user.email="fleetless-release[bot]@users.noreply.github.com" \
+              commit -q -am "chore(release): $VERSION"
+            # The header through git's env-var config, not `-c` on the command
+            # line: an argv is visible to anything that lists processes.
+            auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+            GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+              git push -q --force origin "HEAD:refs/heads/$branch"
+            number="$(node .github/release/release.mjs release-pr --version "$VERSION" --branch "$branch")"
+          fi
+          echo "release PR #$number"
+          echo "commit=$(node .github/release/release.mjs merge-pr --number "$number")" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: [prepare, release-commit]
+    runs-on: ubuntu-latest
+    permissions:
+      # The GitHub release is created with GITHUB_TOKEN; the tag, with the App.
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      COMMIT: ${{ needs.release-commit.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.release-commit.outputs.commit }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ secrets.FLEETLESS_APP_ID }}
+          private-key: ${{ secrets.FLEETLESS_APP_PRIVATE_KEY }}
+          owner: fleetless
+          repositories: app-starter
+          permission-contents: write
+      - name: tag
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: node .github/release/release.mjs create-tag --version "$VERSION" --sha "$COMMIT"
+      - name: the GitHub release, with that version's notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          node .github/release/release.mjs changelog-section --file CHANGELOG.md --version "$VERSION" > "$RUNNER_TEMP/notes.md"
+          node .github/release/release.mjs github-release --version "$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+      - name: summary
+        if: always()
+        run: |
+          {
+            echo "### app-starter v$VERSION — ${{ job.status }}"
+            echo
+            echo "- release commit: \`$COMMIT\`"
+            echo "- the GitHub release v$VERSION carries CHANGELOG.md's notes for it"
+          } >> "$GITHUB_STEP_SUMMARY"

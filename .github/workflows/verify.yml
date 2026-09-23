@@ -21,4 +21,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # The release logic's own tests, the shared list every copy of
+      # release.mjs must pass (spec: "The release logic lives in each
+      # repository").
+      - run: node --test '.github/release/*.test.mjs'
       - run: pnpm build
