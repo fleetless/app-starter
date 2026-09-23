@@ -1,6 +1,5 @@
-# Release: this repository's `main`, as the next version (spec
-# docs/superpowers/specs/2026-09-23-per-repo-release-design.md in
-# fleetless/fleetless).
+# Release: this repository's `main`, as the next version (the
+# per-repository release design of 2026-09-23, in fleetless/fleetless).
 #
 # Press "Run workflow" on main. The version comes from the Conventional
 # Commits since the last tag (.github/release/release.mjs); the first is
