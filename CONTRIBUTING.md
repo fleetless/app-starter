@@ -16,7 +16,7 @@ pnpm install
 ## The checks
 
 ```sh
-pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm lint && pnpm typecheck && pnpm test && node --test '.github/release/*.test.mjs' && pnpm build
 ```
 
 | Command | What it does |
@@ -24,13 +24,14 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 | `pnpm lint` | ESLint over the project. |
 | `pnpm typecheck` | Nuxt's typecheck, plus the `test/` project — a widened union in a fixture typechecks clean under the first alone. |
 | `pnpm test` | The vitest suite. |
+| `node --test '.github/release/*.test.mjs'` | The release logic's own tests. |
 | `pnpm build` | The production build. |
 
 ## Pull requests
 
 **CI runs on GitHub-hosted runners** (`ubuntu-latest`): this is a public
 repository, and a pull request here is a stranger's code. `verify.yml` runs
-the same four commands on every push and every pull request, forks included.
+these same commands on every push and every pull request, forks included.
 Running them yourself first still saves you a round trip.
 
 ## Recording a change, and releasing
