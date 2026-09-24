@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-09-24
+
 ### Added
 
 - This changelog and releases: the template is versioned from 1.0.0 on.
