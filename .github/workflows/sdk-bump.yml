@@ -21,8 +21,12 @@ on:
         type: string
         required: true
 
+# Per version, not per workflow. Two sdk releases close together each want
+# their own pull request; one group for both would leave the second queued
+# behind a run that waits on npm, and GitHub keeps only the newest pending
+# run in a group -- a third dispatch would drop the second version silently.
 concurrency:
-  group: sdk-bump
+  group: sdk-bump-${{ github.event.client_payload.version || inputs.version }}
   cancel-in-progress: false
 
 permissions:
