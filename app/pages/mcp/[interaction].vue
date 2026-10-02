@@ -58,7 +58,7 @@ async function decide(approve: boolean) {
       <p class="text-sm text-muted">
         An AI tool wants to connect to {{ starter.name }} as you.
       </p>
-      <AuthLoginForm :redirect-path="`/mcp/${id}`" @signed-in="load" />
+      <AuthLoginForm :redirect-path="`/mcp/${id}`" :next="`/mcp/${id}`" @signed-in="load" />
     </template>
 
     <template v-else-if="interaction">
