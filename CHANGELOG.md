@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-02
+
 ### Added
 
 - Sign-in by emailed code, beside or instead of the password, as the app's Sign-in page says.
