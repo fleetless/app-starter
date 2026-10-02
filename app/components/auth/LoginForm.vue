@@ -103,7 +103,14 @@ async function signInWith(slug: string) {
       :email="codeFor"
       :password-on="methods.password"
       @result="land"
-      @back="codeFor = null"
+      @back="codeFor = null; problem = null"
+    />
+    <!-- What `land` says after the code step answered: the form below, with its own alert, is not shown. -->
+    <UAlert
+      v-if="codeFor && problem"
+      color="error"
+      variant="subtle"
+      :title="problem"
     />
     <UForm
       v-else
