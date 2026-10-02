@@ -7,6 +7,26 @@ export function isSignedOut(error: unknown): boolean {
   return error instanceof FleetlessError && SIGNED_OUT.has(error.code)
 }
 
+/** A code or challenge that cannot be retried: spent, expired, or the last wrong guess just used it up. */
+export function isDeadCode(error: unknown): boolean {
+  if (!(error instanceof FleetlessError)) return false
+  if (error.code === 'token_spent') return true
+  const left = (error.details as { attempts_left?: unknown } | undefined)?.attempts_left
+  return error.code === 'invalid_code' && left === 0
+}
+
+/**
+ * The app's two-factor policy, as far as a refusal reveals it: no client
+ * route carries it (plan ruling 3). `required` from turning it off, `off`
+ * from setting it up (or from turning off what is not on).
+ */
+export function twoFactorConflict(error: unknown): 'required' | 'off' | null {
+  if (!(error instanceof FleetlessError) || error.code !== 'target_state_conflict') return null
+  const fields = (error.details as { fields?: { field?: string, rule?: string }[] } | undefined)?.fields
+  const hit = Array.isArray(fields) ? fields.find(f => f.field === 'two_factor') : undefined
+  return hit?.rule === 'required' || hit?.rule === 'off' ? hit.rule : null
+}
+
 /**
  * The one sentence the UI shows for a refusal. Every sentence says what did
  * not happen; none guesses why. `invalid_credentials` is one sentence on
@@ -41,7 +61,15 @@ export function sentenceFor(error: unknown): string {
       const ms = typeof details?.retry_after_ms === 'number' ? details.retry_after_ms : null
       return ms === null ? 'Too many attempts. Try again in a moment.' : `Too many attempts. Try again in ${Math.ceil(ms / 1000)} seconds.`
     }
+    case 'invalid_code': {
+      const left = typeof details?.attempts_left === 'number' ? details.attempts_left : 0
+      return left > 0 ? `That code is incorrect. ${left} ${left === 1 ? 'attempt' : 'attempts'} left.` : 'That code is incorrect.'
+    }
+    case 'method_not_allowed': return 'This app does not accept that way of signing in.'
     case 'target_state_conflict': {
+      const twoFactor = twoFactorConflict(error)
+      if (twoFactor === 'required') return 'This app requires two-factor; it cannot be switched off.'
+      if (twoFactor === 'off') return 'Two-factor is not on for this account or this app.'
       const fields = Array.isArray(details?.fields) ? (details.fields as { field?: string }[]) : []
       const field = fields[0]?.field ?? 'a setting'
       return `The app is not set up for this yet: ${field} is missing in the console.`
