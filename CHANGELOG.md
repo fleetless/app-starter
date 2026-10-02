@@ -9,6 +9,10 @@ copy has to change.
 
 ## [Unreleased]
 
+### Changed
+
+- `@fleetless/sdk` 4.3.0. Every sign-in step answers a result that can ask for a second factor; the token pages follow it.
+
 ## [1.0.0] — 2026-09-24
 
 ### Added

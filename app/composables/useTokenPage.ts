@@ -1,5 +1,6 @@
-import { FleetlessError } from '@fleetless/sdk'
+import { FleetlessError, type SignInResult } from '@fleetless/sdk'
 import { sentenceFor } from '~/utils/errors'
+import { STORAGE_REFUSED } from '~/composables/useSignInResult'
 
 export type TokenOutcome = 'spent' | 'failed'
 
@@ -11,12 +12,13 @@ export function outcomeOf(error: unknown): TokenOutcome {
 /**
  * The shape every token page shares: read the token from the path, spend it
  * with the call the page names, replace the URL so the single-use credential
- * does not linger in history, then treat the person as signed in — the three
- * routes that take a token all answer a session.
+ * does not linger in history, then follow the sign-in result — signed in
+ * (`done`; the page lands), or on to the second factor (`follow` has
+ * navigated; the page keeps saying "One moment").
  */
-export function useTokenPage(spend: (token: string) => Promise<void>, replaceWith: string) {
+export function useTokenPage(spend: (token: string) => Promise<SignInResult>, replaceWith: string, next = '/robots') {
   const route = useRoute()
-  const { onSignedIn } = useSession()
+  const { follow } = useSignInResult()
   const state = ref<'spending' | 'done' | TokenOutcome>('spending')
   const problem = ref<string | null>(null)
 
@@ -26,10 +28,14 @@ export function useTokenPage(spend: (token: string) => Promise<void>, replaceWit
     problem.value = null
     const token = typeof route.params.token === 'string' ? route.params.token : ''
     try {
-      await spend(token)
+      const result = await spend(token)
       window.history.replaceState({}, '', replaceWith)
-      await onSignedIn()
-      state.value = 'done'
+      const outcome = await follow(result, next)
+      if (outcome === 'signed_in') state.value = 'done'
+      else if (outcome === 'storage_refused') {
+        state.value = 'failed'
+        problem.value = STORAGE_REFUSED
+      }
     } catch (error) {
       state.value = outcomeOf(error)
       problem.value = sentenceFor(error)

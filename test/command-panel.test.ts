@@ -43,6 +43,7 @@ const event = (state: JobState, progress: number | null): JobEvent => ({
     robot_id: '00000000-0000-4000-8000-000000000001',
     slug: 'count_up',
     state,
+    origin: 'fleetless',
     started_at: '2026-09-17T10:00:00.000Z',
     updated_at: '2026-09-17T10:00:01.000Z',
     seq: 1,

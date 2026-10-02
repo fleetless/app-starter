@@ -18,7 +18,7 @@ const run: JobRun = {
   duration_ms: 2000,
   result: null,
   error: null,
-  actor: { kind: 'app_user', id: '00000000-0000-4000-8000-000000000003', label: 'dev@example.com' },
+  actor: { kind: 'app_user', id: '00000000-0000-4000-8000-000000000003', label: 'dev@example.com', name: null },
   seq: 41,
   progress: null,
   feedback: null
