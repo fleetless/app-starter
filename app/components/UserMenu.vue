@@ -18,6 +18,10 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
   icon: 'i-lucide-user',
   to: '/account'
 }, {
+  label: 'Security',
+  icon: 'i-lucide-shield-check',
+  to: '/account/security'
+}, {
   label: 'Connected AI tools',
   icon: 'i-lucide-plug',
   to: '/account/connections'
