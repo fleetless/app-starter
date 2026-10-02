@@ -1,48 +1,71 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { ProviderButton } from '@fleetless/sdk'
+import type { ProviderButton, SignInMethods, SignInResult } from '@fleetless/sdk'
 import { sentenceFor } from '~/utils/errors'
 import { rememberOidc } from '~/utils/oidc'
+import { STORAGE_REFUSED } from '~/composables/useSignInResult'
 
 const props = defineProps<{
   /** Where the OIDC round trip returns to. Defaults to this app's callback page. */
   redirectPath?: string
-  /** Where to land after a provider sign-in. Already guarded by the caller. */
+  /** Where to land after any sign-in that completes off this page: a provider round trip, or a second factor. Already guarded by the caller. */
   next?: string
 }>()
 const emit = defineEmits<{ signedIn: [] }>()
 
 const client = useFleetless()
-const { onSignedIn } = useSession()
+const { follow } = useSignInResult()
+const methods = ref<SignInMethods>({ password: true, emailCode: false })
+const codeFor = ref<string | null>(null)
 
-const schema = z.object({
-  email: z.string().email('An email address, please.'),
-  password: z.string().min(1, 'A password, please.')
-})
-type Schema = z.output<typeof schema>
+const emailOnly = z.object({ email: z.string().trim().email('An email address, please.') })
+const withPassword = emailOnly.extend({ password: z.string().min(1, 'A password, please.') })
+const schema = computed(() => (methods.value.password ? withPassword : emailOnly))
 
-const state = reactive<Partial<Schema>>({ email: '', password: '' })
+const state = reactive<{ email: string, password?: string }>({ email: '', password: '' })
 const busy = ref(false)
 const problem = ref<string | null>(null)
 const providers = ref<ProviderButton[]>([])
 
 onMounted(async () => {
-  try {
-    providers.value = await client.auth.listProviders()
-  } catch {
-    // No provider list is no buttons. The password form still works.
-    providers.value = []
-  }
+  const [listed, offered] = await Promise.allSettled([client.auth.listProviders(), client.auth.signInMethods()])
+  // No provider list is no buttons; no method list is today's password form.
+  providers.value = listed.status === 'fulfilled' ? listed.value : []
+  if (offered.status === 'fulfilled' && (offered.value.password || offered.value.emailCode)) methods.value = offered.value
 })
 
-async function submit(event: FormSubmitEvent<Schema>) {
+async function land(result: SignInResult) {
+  const outcome = await follow(result, props.next ?? '/robots')
+  if (outcome === 'signed_in') emit('signedIn')
+  else if (outcome === 'storage_refused') problem.value = STORAGE_REFUSED
+}
+
+async function submit(event: FormSubmitEvent<{ email: string, password?: string }>) {
+  if (!methods.value.password) return sendCode(event.data.email)
   busy.value = true
   problem.value = null
   try {
-    await client.auth.login(event.data.email, event.data.password)
-    await onSignedIn()
-    emit('signedIn')
+    await land(await client.auth.login(event.data.email, event.data.password ?? ''))
+  } catch (error) {
+    problem.value = sentenceFor(error)
+  } finally {
+    busy.value = false
+  }
+}
+
+/** One trim, used for the request and the verify: the code belongs to exactly that address. */
+async function sendCode(raw: string | undefined) {
+  const parsed = emailOnly.safeParse({ email: raw ?? '' })
+  if (!parsed.success) {
+    problem.value = 'An email address, please.'
+    return
+  }
+  busy.value = true
+  problem.value = null
+  try {
+    await client.auth.requestLoginCode(parsed.data.email)
+    codeFor.value = parsed.data.email
   } catch (error) {
     problem.value = sentenceFor(error)
   } finally {
@@ -75,7 +98,15 @@ async function signInWith(slug: string) {
 
 <template>
   <div class="flex flex-col gap-4">
+    <AuthCodeStep
+      v-if="codeFor"
+      :email="codeFor"
+      :password-on="methods.password"
+      @result="land"
+      @back="codeFor = null"
+    />
     <UForm
+      v-else
       :schema="schema"
       :state="state"
       class="flex flex-col gap-4"
@@ -89,7 +120,7 @@ async function signInWith(slug: string) {
           class="w-full"
         />
       </UFormField>
-      <UFormField label="Password" name="password">
+      <UFormField v-if="methods.password" label="Password" name="password">
         <UInput
           v-model="state.password"
           type="password"
@@ -105,9 +136,17 @@ async function signInWith(slug: string) {
       />
       <UButton
         type="submit"
-        label="Sign in"
+        :label="methods.password ? 'Sign in' : 'Email me a code'"
         block
         :loading="busy"
+      />
+      <UButton
+        v-if="methods.password && methods.emailCode"
+        type="button"
+        label="Email me a sign-in code instead"
+        variant="ghost"
+        block
+        @click="sendCode(state.email)"
       />
     </UForm>
 
@@ -125,7 +164,7 @@ async function signInWith(slug: string) {
     </template>
 
     <div class="flex justify-between text-sm">
-      <ULink to="/auth/forgot">
+      <ULink v-if="methods.password" to="/auth/forgot">
         Forgot password
       </ULink>
       <ULink to="/auth/register">
