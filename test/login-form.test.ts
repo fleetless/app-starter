@@ -108,6 +108,21 @@ describe('code sign-in', () => {
     expect(readChallenge()).toEqual({ status: 'two_factor_required', challenge: 'ch-5', next: '/robots/r1' })
     expect(form.emitted('signedIn')).toBeUndefined()
   })
+
+  it('a challenge the browser refuses to keep says so on the code step', async () => {
+    fake.auth!.verifyLoginCode.mockResolvedValue({ status: 'two_factor_required', challenge: 'ch-7' })
+    const setItem = vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    try {
+      const form = await requestCode('ann@example.com')
+      await enter(form, '123456')
+      expect(fake.navigate).not.toHaveBeenCalled()
+      expect(form.text()).toContain('This browser refused to keep the sign-in state.')
+    } finally {
+      setItem.mockRestore()
+    }
+  })
 })
 
 describe('password sign-in through the result', () => {
