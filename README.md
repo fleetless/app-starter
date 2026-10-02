@@ -48,8 +48,14 @@ you can tell a missing setting from a broken app.
 2. **Registration page.** `allowed_origins`: `http://localhost:3000`, a bare
    origin, no path, no trailing slash. (Without it: every call fails as a
    network error with no status and no body — the browser refuses the answer
-   before your code sees it.) Then, on **App URLs** and **MCP**, the three
-   token URLs and the MCP one, each pointing into this app:
+   before your code sees it.)
+
+   Optional, once the starter runs somewhere the people you invite can
+   reach: on the app's **Sign-in** page, under **Pages**, switch
+   Invitation, Email verification, Password reset and MCP sign-in to
+   **Your app** with these URLs. Until then Fleetless's hosted pages
+   answer every mailed link and the MCP sign-in, so nothing here needs
+   them.
 
    | Setting | Value |
    |---|---|
@@ -65,9 +71,11 @@ you can tell a missing setting from a broken app.
    Activity and Assets tabs should exist. A new role grants nothing.
    (Without it: sign-in works and the robot list is empty.)
 5. **Attach a robot** to the app on its page, and **create or invite an app
-   user** on the Users page. That user's email and password sign in here. Your
-   own console login will not: it is a Fleetless user, a different identity
-   space.
+   user** on the Users page. That user signs in here with a password or an
+   emailed code, whichever the app's **Sign-in** page turns on (password by
+   default). If that page requires two-factor, the starter sets it up at the
+   first sign-in. Your own console login will not: it is a Fleetless user, a
+   different identity space.
 
 Then sign in. The robot appears; click it.
 
@@ -92,6 +100,9 @@ Then sign in. The robot appears; click it.
 | `app/composables/useSession.ts` | Who is signed in, and where an expired session goes. |
 | `app/middleware/auth.global.ts` | Everything but `/auth/*` and `/mcp/*` needs a session. |
 | `app/pages/auth/*` | Login, register, verify, forgot, reset, invite, the OIDC callback. |
+| `app/composables/useSignInResult.ts` | Where every sign-in result goes: signed in, or on to the second factor. |
+| `app/pages/auth/two-factor/*` | The second factor: the code or a recovery code, and the setup an app can require. |
+| `app/pages/account/security.vue` | Two-factor on or off, from the user menu's `Security`. |
 | `app/pages/mcp/[interaction].vue` | The consent screen an AI tool sends its user to. |
 | `app/pages/robots/*` | The list, and the robot page whose tabs come from the datasheet. |
 | `app/components/robot/ParameterForm.vue` | A form from a datasheet's `input_schema`. |
