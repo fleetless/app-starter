@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FleetlessError } from '@fleetless/sdk'
-import { fieldErrorsFrom, isSignedOut, sentenceFor } from '~/utils/errors'
+import { fieldErrorsFrom, isDeadCode, isSignedOut, sentenceFor, twoFactorConflict } from '~/utils/errors'
 
 describe('sentenceFor', () => {
   it('says one sentence for invalid_credentials, whatever the cause', () => {
@@ -70,5 +70,35 @@ describe('isSignedOut', () => {
       expect(isSignedOut(new FleetlessError(code, 'x')), code).toBe(true)
     }
     expect(isSignedOut(new FleetlessError('forbidden', 'x'))).toBe(false)
+  })
+})
+
+const err = (code: string, details?: unknown) => new FleetlessError(code, code, { status: 400, details } as never)
+
+describe('two-factor and code refusals', () => {
+  it('names the attempts left, and only when there are some', () => {
+    expect(sentenceFor(err('invalid_code', { attempts_left: 3 }))).toBe('That code is incorrect. 3 attempts left.')
+    expect(sentenceFor(err('invalid_code', { attempts_left: 1 }))).toBe('That code is incorrect. 1 attempt left.')
+    expect(sentenceFor(err('invalid_code', { attempts_left: 0 }))).toBe('That code is incorrect.')
+    expect(sentenceFor(err('invalid_code'))).toBe('That code is incorrect.')
+  })
+
+  it('a spent code, or the last wrong guess, is dead', () => {
+    expect(isDeadCode(err('token_spent'))).toBe(true)
+    expect(isDeadCode(err('invalid_code', { attempts_left: 0 }))).toBe(true)
+    expect(isDeadCode(err('invalid_code', { attempts_left: 2 }))).toBe(false)
+    expect(isDeadCode(new Error('x'))).toBe(false)
+  })
+
+  it('reads the two-factor conflict the cloud answers', () => {
+    const conflict = (rule: string) => err('target_state_conflict', { fields: [{ field: 'two_factor', rule, message: 'm' }] })
+    expect(twoFactorConflict(conflict('required'))).toBe('required')
+    expect(twoFactorConflict(conflict('off'))).toBe('off')
+    expect(twoFactorConflict(err('target_state_conflict', { fields: [{ field: 'default_role_id', rule: 'missing' }] }))).toBeNull()
+    expect(sentenceFor(conflict('required'))).toBe('This app requires two-factor; it cannot be switched off.')
+  })
+
+  it('a method the app has switched off', () => {
+    expect(sentenceFor(err('method_not_allowed'))).toBe('This app does not accept that way of signing in.')
   })
 })
