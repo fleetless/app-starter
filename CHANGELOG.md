@@ -9,6 +9,14 @@ copy has to change.
 
 ## [Unreleased]
 
+### Added
+
+- A sentence for `plan_limit`, "This app has no room for another user on its plan.", on the OIDC callback and on registration, where the organisation's plan is full. `quota_exceeded` keeps "This app has reached its user limit." for the protection ceiling.
+
+### Changed
+
+- `@fleetless/sdk` 4.4.0-next.1, a pre-release for the sdk that recognises `plan_limit` from a federated sign-in. The final version is pinned before merge.
+
 ## [1.1.0] — 2026-10-02
 
 ### Added
