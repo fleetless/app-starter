@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@fleetless/sdk':
-        specifier: 4.3.0
-        version: 4.3.0
+        specifier: 4.4.0-next.1
+        version: 4.4.0-next.1
       '@iconify-json/lucide':
         specifier: ^1.2.131
         version: 1.2.133
@@ -817,8 +817,8 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@fleetless/sdk@4.3.0':
-    resolution: {integrity: sha512-qjAu/GZZPHnlUSlESExqSGQQBWxFLJaNbtkoYx+BIHlh5J+guMF3VAsG7eopD52lPXYjSD8lOa3lquVb4oKJ8g==}
+  '@fleetless/sdk@4.4.0-next.1':
+    resolution: {integrity: sha512-0dvI77ZWilrpTMCQZCTMiZeUxb3b1f0ft/w63dgSQRC0lZzn2liwWSWyWHMXemIPqWcGzoRzEp8hhCcF+9TAlw==}
     engines: {node: '>=20'}
 
   '@floating-ui/core@1.8.0':
@@ -6154,7 +6154,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@fleetless/sdk@4.3.0':
+  '@fleetless/sdk@4.4.0-next.1':
     dependencies:
       zod: 4.6.5
 
