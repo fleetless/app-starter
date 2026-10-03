@@ -54,6 +54,9 @@ export function sentenceFor(error: unknown): string {
     case 'provider_disabled': return 'That provider is switched off for this app.'
     case 'invalid_request': return 'The sign-in request was malformed. Start again.'
     case 'quota_exceeded': return 'This app has reached its user limit.'
+    // The plan is full, not the protection ceiling. Also the password
+    // self-registration's `409 plan_limit`, so one sentence serves both doors.
+    case 'plan_limit': return 'This app has no room for another user on its plan.'
     case 'weak_password': return 'That password is too short. Twelve characters or more.'
     case 'rate_limited': {
       // No number is better than a wrong one: "in 0 seconds" invites a retry

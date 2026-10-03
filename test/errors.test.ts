@@ -21,7 +21,7 @@ describe('sentenceFor', () => {
   })
 
   it('answers every OIDC callback code with a sentence, never a bare code', () => {
-    // The twelve of `clientOidcErrorCode`; the callback page is the only screen
+    // The thirteen of `clientOidcErrorCode`; the callback page is the only screen
     // they arrive on, and a raw identifier there tells nobody what to do next.
     const table: [string, string][] = [
       ['no_access', 'This account has no access to this app.'],
@@ -34,12 +34,18 @@ describe('sentenceFor', () => {
       ['provider_disabled', 'That provider is switched off for this app.'],
       ['invalid_request', 'The sign-in request was malformed. Start again.'],
       ['quota_exceeded', 'This app has reached its user limit.'],
+      ['plan_limit', 'This app has no room for another user on its plan.'],
       ['domain_not_allowed', 'Addresses at that domain cannot register here.'],
       ['registration_closed', 'This app does not take new accounts.']
     ]
     for (const [code, sentence] of table) {
       expect(sentenceFor(new FleetlessError(code, 'server text')), code).toBe(sentence)
     }
+  })
+
+  it('says the same plan sentence for the password self-registration\'s 409 plan_limit', () => {
+    const error = new FleetlessError('plan_limit', 'full', { status: 409, details: { limit: 'app_users', used: 10, max: 10, plan: 'basic', lifted_by: { plan: 'plus', addon: null } } })
+    expect(sentenceFor(error)).toBe('This app has no room for another user on its plan.')
   })
 
   it('says a live-only datapoint is not recorded, rather than empty', () => {
