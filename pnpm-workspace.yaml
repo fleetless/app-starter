@@ -6,4 +6,4 @@ allowBuilds:
   unrs-resolver: false
   vue-demi: false
 minimumReleaseAgeExclude:
-  - '@fleetless/sdk@4.3.0 || 4.4.0-next.1'
+  - '@fleetless/sdk@4.4.0'
