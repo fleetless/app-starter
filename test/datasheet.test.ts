@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { McpRobotDatasheet } from '@fleetless/sdk'
-import { exposuresOf, tabsFor } from '~/utils/datasheet'
+import { exposuresOf, grantsDatapoint, tabsFor } from '~/utils/datasheet'
 
 const exposure = (slug: string, kind: McpRobotDatasheet['exposures'][number]['kind']) =>
   ({ slug, kind, description: null, unit: null, decimals: null, input_schema: null })
@@ -17,16 +17,36 @@ describe('tabsFor', () => {
     ])
   })
 
-  it('adds Activity and Assets for the two capabilities, without a count', () => {
+  it('adds Activity, Assets and 3D for the capabilities, without a count', () => {
     const tabs = tabsFor(sheet([], { action_history: true, assets: true }))
     expect(tabs).toEqual([
       { key: 'activity', label: 'Activity', count: null },
-      { key: 'assets', label: 'Assets', count: null }
+      { key: 'assets', label: 'Assets', count: null },
+      { key: 'model', label: '3D', count: null }
     ])
+  })
+
+  it('offers no 3D tab without the assets capability', () => {
+    const tabs = tabsFor(sheet([], { action_history: true, assets: false }))
+    expect(tabs.map(t => t.key)).toEqual(['activity'])
   })
 
   it('answers no tabs for a sheet that grants nothing', () => {
     expect(tabsFor(sheet([]))).toEqual([])
+  })
+})
+
+describe('grantsDatapoint', () => {
+  it('is true for a granted datapoint', () => {
+    expect(grantsDatapoint(sheet([exposure('joint_states', 'datapoint')]), 'joint_states')).toBe(true)
+  })
+
+  it('is false when the slug is exposed as another kind', () => {
+    expect(grantsDatapoint(sheet([exposure('joint_states', 'service')]), 'joint_states')).toBe(false)
+  })
+
+  it('is false when the slug is absent', () => {
+    expect(grantsDatapoint(sheet([exposure('other', 'datapoint')]), 'joint_states')).toBe(false)
   })
 })
 
