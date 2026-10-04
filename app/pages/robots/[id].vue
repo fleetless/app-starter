@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import { exposuresOf, tabsFor, type TabKey } from '~/utils/datasheet'
+import { exposuresOf, grantsDatapoint, tabsFor, type TabKey } from '~/utils/datasheet'
 
 const route = useRoute()
 const robotId = typeof route.params.id === 'string' ? route.params.id : ''
@@ -104,6 +104,7 @@ onMounted(reload)
         </div>
         <RobotJobHistory v-else-if="active === 'activity'" :robot-id="robotId" />
         <RobotAssetList v-else-if="active === 'assets'" :robot-id="robotId" />
+        <RobotModelView v-else-if="active === 'model'" :robot-id="robotId" :joint-states="grantsDatapoint(sheet, 'joint_states')" />
       </template>
     </template>
   </UDashboardPanel>

@@ -9,6 +9,13 @@ copy has to change.
 
 ## [Unreleased]
 
+### Added
+
+- A 3D tab on the robot page renders the robot's synced URDF, its textures
+  and `.dae`-embedded images included, with `assets.prepareUrdfScene`. It
+  moves the joints from a `joint_states` datapoint when the role grants it.
+  `three` and `urdf-loader` are pinned exactly.
+
 ## [1.2.0] — 2026-10-04
 
 ### Added
