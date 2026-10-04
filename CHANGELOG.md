@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-04
+
 ### Added
 
 - A sentence for `plan_limit`, "This app has no room for another user on its plan.", on the OIDC callback and on registration, where the organisation's plan is full. `quota_exceeded` keeps "This app has reached its user limit." for the protection ceiling.
