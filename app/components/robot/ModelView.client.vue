@@ -102,6 +102,8 @@ onMounted(async () => {
     }
     manager.onLoad = () => {
       if (unmounted || !renderer || !scene) return
+      // Meshes arrive asynchronously, after parse(): the bounding box only has its size now.
+      frame(camera, scene)
       renderer.render(scene, camera)
       state.value = 'rendered'
     }
@@ -141,8 +143,8 @@ onMounted(async () => {
         onEvent: (event) => {
           applied.value = { ...applied.value, ...applyJointState(robot.joints, event.value) }
         },
-        onError: (error) => {
-          problem.value = sentenceFor(error)
+        onError: async (error) => {
+          problem.value = (await onError(error)) ?? sentenceFor(error)
         }
       })
     }
