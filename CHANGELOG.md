@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+- `@fleetless/sdk` 4.4.0.
+
 ## [1.1.0] — 2026-10-02
 
 ### Added
