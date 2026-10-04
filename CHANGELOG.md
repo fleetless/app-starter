@@ -15,7 +15,7 @@ copy has to change.
 
 ### Changed
 
-- `@fleetless/sdk` 4.4.0-next.1, a pre-release for the sdk that recognises `plan_limit` from a federated sign-in. The final version is pinned before merge.
+- `@fleetless/sdk` 4.4.0, which recognises `plan_limit` from a federated sign-in.
 
 ## [1.1.0] — 2026-10-02
 
