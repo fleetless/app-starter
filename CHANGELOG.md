@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-05
+
 ### Added
 
 - A 3D tab on the robot page renders the robot's synced URDF, its textures
