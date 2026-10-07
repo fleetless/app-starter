@@ -3,8 +3,13 @@
 # shows whether the template still builds against it. It does not merge
 # itself — a major can need code changes, so a person or an agent merges it.
 #
-# Sent by sdk's release.yml as a `repository_dispatch` of type `sdk-release`
-# carrying `version`; run by hand with the same input to re-pin on purpose.
+# Sent by fleetless/fleetless promote.yml when it moves `latest` to an sdk
+# version (spec 2026-10-06-staging-environment §9.6); run by hand with the
+# same input to re-pin on purpose. A final sdk release publishes under the
+# npm dist-tag `staging` only, never `latest` directly, so the version this
+# pins must already be promoted — `node scripts/promoted.mjs` below is the
+# gate. An old `sdk-release` dispatch (from an sdk built before sdk stopped
+# sending it) triggers nothing: this workflow no longer listens for it.
 #
 # The version is waited for until npm serves its tarball, not merely lists it:
 # npm's metadata runs minutes ahead of the tarball, and a lockfile written in
@@ -13,7 +18,7 @@ name: sdk-bump
 
 on:
   repository_dispatch:
-    types: [sdk-release]
+    types: [sdk-promoted]
   workflow_dispatch:
     inputs:
       version:
@@ -55,6 +60,10 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
+      - name: is it promoted
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/promoted.mjs "$VERSION"
       - uses: actions/create-github-app-token@v3
         id: app
         with:
