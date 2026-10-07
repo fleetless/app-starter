@@ -9,6 +9,14 @@ copy has to change.
 
 ## [Unreleased]
 
+### Changed
+
+- `sdk-bump.yml` pins an `@fleetless/sdk` version only once it is promoted
+  to production, never a release still on npm's `staging` dist-tag alone
+  (spec 2026-10-06-staging-environment §9.6). It now runs on the
+  `sdk-promoted` dispatch from `fleetless/fleetless promote.yml`, not on
+  sdk's own release; `scripts/promoted.mjs` is the gate.
+
 ## [1.3.0] — 2026-10-05
 
 ### Added
