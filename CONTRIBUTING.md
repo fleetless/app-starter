@@ -31,8 +31,8 @@ pnpm lint && pnpm typecheck && pnpm test && node --test '.github/release/*.test.
 
 **CI runs on GitHub-hosted runners** (`ubuntu-latest`): this is a public
 repository, and a pull request here is a stranger's code. `verify.yml` runs
-these same commands on every push and every pull request, forks included.
-Running them yourself first still saves you a round trip.
+these same commands on every pull request, forks included, and on every
+push to `main`. Running them yourself first still saves you a round trip.
 
 ## Recording a change, and releasing
 

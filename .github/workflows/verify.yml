@@ -1,4 +1,4 @@
-# Every push and pull request: install from the lockfile, lint, typecheck
+# Every pull request and every push to `main`: install from the lockfile, lint, typecheck
 # (both TypeScript projects), the suite, and a build. Hosted runner: this is
 # a public repository, and a pull request here is a stranger's code.
 name: verify
