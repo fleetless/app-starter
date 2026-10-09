@@ -16,6 +16,7 @@ copy has to change.
   (spec 2026-10-06-staging-environment §9.6). It now runs on the
   `sdk-promoted` dispatch from `fleetless/fleetless promote.yml`, not on
   sdk's own release; `scripts/promoted.mjs` is the gate.
+- `@fleetless/sdk` 4.5.0.
 
 ## [1.3.0] — 2026-10-05
 
