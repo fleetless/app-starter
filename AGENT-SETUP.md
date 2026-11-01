@@ -1,7 +1,8 @@
 # 🤖 Set it up with an agent
 
-The five console steps in the README can also be handled by an agent. Paste
-the prompt into an MCP client connected to the Fleetless central endpoint,
+The five console steps in the README are also ten tool calls, eleven when the
+mailed links should open in the starter, one more per extra robot. Paste the
+prompt below into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
 agent asks you seven things once and does the rest.
@@ -22,29 +23,29 @@ the report.
 ## The prompt
 
 ```text
-You are setting up a Fleetless app for the app-starter template using the Fleetless MCP tools on the central endpoint. Call docs with action describe before the first use of each action to read its exact inputs and conditions. Work through the steps in order, call the tools rather than describing them, ask me only the questions in step 1, and invent no values. If a tool refuses, stop, quote the code and the sentence it returned, and ask me how to continue.
+You are setting up a Fleetless app for the app-starter template using the Fleetless MCP tools on the central endpoint. Work through the steps in order, call the tools rather than describing them, ask me only the questions in step 1, and invent no values. If a tool refuses, stop, quote the code and the sentence it returned, and ask me how to continue.
 
 1. Ask me for, in one message:
    (a) the app name;
    (b) the app identifier — lowercase letters, digits and underscores, starting with a letter;
    (c) the origin the app runs on, default http://localhost:3000;
-   (d) which robots to attach — call console_robots_read with action list first and show me their names;
+   (d) which robots to attach — call console_robots_list first and show me their names;
    (e) the email address of the first app user;
    (f) whether Fleetless should mail the invitation, or hand me the link;
    (g) whether mailed links and the MCP sign-in should open in this app instead of on Fleetless's hosted pages — default no; yes only once the app runs at an origin the people I invite can reach.
 
-2. Create the app with console_apps_write, action create: name, identifier and the chosen robot_ids. Keep the app id.
+2. Create the app with console_app_create: name, identifier and the chosen robot_ids. Keep the app id.
 
-3. Read the auth configuration with console_apps_read, action auth_config, to see the current self_registration, allowed_domains and app_url. Then write each slice with console_apps_write, carrying every field that slice takes:
-   - action set_registration: self_registration and allowed_domains exactly as read, allowed_origins set to the origin from (c), bare — scheme, host and port, no path, no trailing slash
-   - action set_mcp: mcp_enabled true
-   - only if I said yes in (g), action set_urls: app_url exactly as read, invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}; otherwise leave the URLs unset, and Fleetless's hosted pages answer those links
+3. Read the auth configuration with console_app_auth_config_get, to see the current self_registration, allowed_domains and app_url. Then write each slice, carrying every field that slice takes:
+   - console_app_auth_config_registration_put: self_registration and allowed_domains exactly as read, allowed_origins set to the origin from (c), bare — scheme, host and port, no path, no trailing slash
+   - console_app_auth_config_mcp_put: mcp_enabled true
+   - only if I said yes in (g), console_app_auth_config_urls_put: app_url exactly as read, invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}; otherwise leave the URLs unset, and Fleetless's hosted pages answer those links
 
-4. Create a role named "Operator" with console_roles_write, action create, and keep its id. For every attached robot call console_robots_read, action exposures, and collect its slugs. Then call console_roles_write, action set_permissions, once, with one grant per robot carrying all of that robot's slugs, and the capabilities action_history, presence and assets all true. A robot with no exposures gets no grant; note it for the report.
+4. Create a role named "Operator" with console_role_create and keep its id. For every attached robot call console_robot_exposures and collect its slugs. Then call console_role_permissions_put once, with one grant per robot carrying all of that robot's slugs, and the capabilities action_history, presence and assets all true. A robot with no exposures gets no grant; note it for the report.
 
-5. Make that role the app's default with console_apps_write, action update, default_role_id.
+5. Make that role the app's default with console_app_update, default_role_id.
 
-6. Invite the first user with console_app_users_write, action invite: the email from (e), role_id of the Operator role, send_mail true if I chose mail in (f), otherwise false.
+6. Invite the first user with console_app_user_invite: the email from (e), role_id of the Operator role, send_mail true if I chose mail in (f), otherwise false.
 
 7. Report, and nothing else:
    - the line for .env: NUXT_PUBLIC_APP_IDENTIFIER=<identifier>
