@@ -11,6 +11,8 @@ copy has to change.
 
 ### Changed
 
+- `AGENT-SETUP.md` now calls the bundled MCP tools with explicit actions and
+  looks up each action's exact inputs with `docs.describe` before using it.
 - `sdk-bump.yml` pins an `@fleetless/sdk` version only once it is promoted
   to production, never a release still on npm's `staging` dist-tag alone
   (spec 2026-10-06-staging-environment §9.6). It now runs on the
