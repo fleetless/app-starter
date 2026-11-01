@@ -1,8 +1,7 @@
 # 🤖 Set it up with an agent
 
-The five console steps in the README are also ten tool calls, eleven when the
-mailed links should open in the starter, one more per extra robot. Paste the
-prompt below into an MCP client connected to the Fleetless central endpoint,
+The five console steps in the README can also be handled by an agent. Paste
+the prompt into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
 agent asks you seven things once and does the rest.
