@@ -1,4 +1,5 @@
 allowBuilds:
+  '@fleetless/sdk@https://codeload.github.com/fleetless/sdk/tar.gz/ada96a0859ff1404b90488e81fb02f77237665fa': true
   '@parcel/watcher': false
   '@tailwindcss/oxide': false
   esbuild: false
