@@ -45,7 +45,7 @@ describe('Account › Security', () => {
     })
   }
 
-  it.each([undefined, null, 'bogus'])('missing or invalid twoFactor %s fails closed until Retry', async twoFactor => {
+  it.each([undefined, null, 'bogus'])('missing or invalid twoFactor %s fails closed until Retry', async (twoFactor) => {
     fake.auth!.signInMethods.mockResolvedValueOnce({ password: true, emailCode: false, twoFactor } as never)
     fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: false, twoFactor: 'optional' } as never)
     const page = await mountWith(false)

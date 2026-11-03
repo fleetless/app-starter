@@ -43,4 +43,55 @@ describe('accepting an invitation', () => {
     await flushPromises()
     expect(fake.navigate).toHaveBeenCalledWith('/auth/two-factor/setup')
   })
+
+  for (const password of [true, false]) {
+    it(`announces required setup before accepting a ${password ? 'password' : 'code-only'} invitation`, async () => {
+      fake.auth!.signInMethods.mockResolvedValue({ password, emailCode: !password, twoFactor: 'required' })
+      const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
+      await flushPromises()
+      expect(page.text()).toContain('Next you set up two-factor authentication — Fleetless App requires it.')
+      expect(page.find('input[type="password"]').exists()).toBe(password)
+      expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
+    })
+  }
+
+  for (const twoFactor of ['off', 'optional'] as const) {
+    it(`does not announce setup for policy ${twoFactor}`, async () => {
+      fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: false, twoFactor })
+      const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
+      await flushPromises()
+      expect(page.text()).not.toContain('Next you set up two-factor authentication')
+    })
+  }
+
+  it.each([undefined, null, 'bogus'])('blocks acceptance on missing or invalid twoFactor %s until Retry', async (twoFactor) => {
+    fake.auth!.signInMethods.mockResolvedValueOnce({ password: true, emailCode: false, twoFactor } as never)
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'required' })
+    const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
+    await flushPromises()
+    expect(page.find('form').exists()).toBe(false)
+    expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
+    await page.findAll('button').find(button => button.text() === 'Retry')!.trigger('click')
+    await flushPromises()
+    expect(page.text()).toContain('Next you set up two-factor authentication — Fleetless App requires it.')
+    expect(page.find('input[type="password"]').exists()).toBe(false)
+    await page.find('form').trigger('submit')
+    await flushPromises()
+    expect(fake.auth!.acceptInvitation).toHaveBeenCalledTimes(1)
+    expect(fake.auth!.acceptInvitation).toHaveBeenCalledWith({ token: 'tok-1', password: undefined, displayName: undefined })
+  })
+
+  it('a failed read blocks acceptance; repeated Retry clicks do not submit', async () => {
+    fake.auth!.signInMethods.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
+    await flushPromises()
+    expect(page.find('form').exists()).toBe(false)
+    expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
+    const retry = page.findAll('button').find(button => button.text() === 'Retry')!
+    await retry.trigger('click')
+    await retry.trigger('click')
+    await flushPromises()
+    expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
+    expect(page.find('form').exists()).toBe(true)
+  })
 })

@@ -1,34 +1,50 @@
 <script setup lang="ts">
+import type { SignInMethods } from '@fleetless/sdk'
+import { requireSignInMethods } from '~/utils/sign-in-methods'
+
 definePageMeta({ layout: 'auth' })
 const client = useFleetless()
+const { starter } = useAppConfig()
 const password = ref('')
 const displayName = ref('')
-const passwordOn = ref(true)
-const ready = ref(false)
-onMounted(async () => {
+const methods = ref<SignInMethods | null>(null)
+const policyProblem = ref<string | null>(null)
+const loading = ref(false)
+async function loadMethods() {
+  if (loading.value) return
+  loading.value = true
+  methods.value = null
+  policyProblem.value = null
   try {
-    passwordOn.value = (await client.auth.signInMethods()).password
+    methods.value = requireSignInMethods(await client.auth.signInMethods())
   } catch {
-    // Unreadable: today's form. A code-only app refuses a password with
-    // validation_error, and that sentence shows on the form.
-    passwordOn.value = true
+    policyProblem.value = 'Could not read this app\'s sign-in methods and two-factor policy. Try again.'
+  } finally {
+    loading.value = false
   }
-  ready.value = true
-})
+}
+onMounted(loadMethods)
 const { state, problem, run } = useTokenPage(
   token => client.auth.acceptInvitation({
     token,
-    password: passwordOn.value ? password.value : undefined,
+    password: methods.value?.password ? password.value : undefined,
     displayName: displayName.value || undefined
   }),
   '/auth/invite/done'
 )
 const started = ref(false)
+const accepting = ref(false)
 
 async function submit() {
+  if (!methods.value || accepting.value) return
+  accepting.value = true
   started.value = true
-  await run()
-  if (state.value === 'done') await navigateTo('/robots')
+  try {
+    await run()
+    if (state.value === 'done') await navigateTo('/robots')
+  } finally {
+    accepting.value = false
+  }
 }
 </script>
 
@@ -37,8 +53,12 @@ async function submit() {
     <h1 class="text-lg font-semibold">
       You have been invited
     </h1>
-    <form v-if="ready && (!started || state === 'failed')" class="flex flex-col gap-4" @submit.prevent="submit">
-      <UFormField v-if="passwordOn" label="Password" hint="12+ characters">
+    <div v-if="policyProblem" class="flex flex-col gap-3">
+      <UAlert color="error" variant="subtle" :title="policyProblem" />
+      <UButton label="Retry" class="w-fit" @click="loadMethods" />
+    </div>
+    <form v-else-if="methods && (!started || state === 'failed')" class="flex flex-col gap-4" @submit.prevent="submit">
+      <UFormField v-if="methods.password" label="Password" hint="12+ characters">
         <UInput
           v-model="password"
           type="password"
@@ -48,6 +68,9 @@ async function submit() {
       </UFormField>
       <p v-else class="text-sm text-muted">
         You sign in with a code we email you — no password.
+      </p>
+      <p v-if="methods.twoFactor === 'required'" class="text-sm text-muted">
+        Next you set up two-factor authentication — {{ starter.name }} requires it.
       </p>
       <UFormField label="Display name" hint="optional">
         <UInput v-model="displayName" class="w-full" />

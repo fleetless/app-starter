@@ -33,6 +33,13 @@ describe('the sign-in form per method', () => {
     expect(form.find('input[type="password"]').exists()).toBe(true)
   })
 
+  it('missing twoFactor is treated as an unreadable method response', async () => {
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true } as never)
+    const form = await mountSuspended(LoginForm)
+    await flushPromises()
+    expect(form.find('input[type="password"]').exists()).toBe(true)
+  })
+
   it('both: password, plus the code link', async () => {
     fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: true, twoFactor: 'optional' })
     const form = await mountSuspended(LoginForm)

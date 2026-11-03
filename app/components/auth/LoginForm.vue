@@ -4,6 +4,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { ProviderButton, SignInMethods, SignInResult } from '@fleetless/sdk'
 import { sentenceFor } from '~/utils/errors'
 import { rememberOidc } from '~/utils/oidc'
+import { requireSignInMethods } from '~/utils/sign-in-methods'
 import { STORAGE_REFUSED } from '~/composables/useSignInResult'
 
 const props = defineProps<{
@@ -32,7 +33,14 @@ onMounted(async () => {
   const [listed, offered] = await Promise.allSettled([client.auth.listProviders(), client.auth.signInMethods()])
   // No provider list is no buttons; no method list is today's password form.
   providers.value = listed.status === 'fulfilled' ? listed.value : []
-  if (offered.status === 'fulfilled' && (offered.value.password || offered.value.emailCode)) methods.value = offered.value
+  if (offered.status === 'fulfilled') {
+    try {
+      const read = requireSignInMethods(offered.value)
+      if (read.password || read.emailCode) methods.value = read
+    } catch {
+      // An older Cloud response is as unreadable as a failed request.
+    }
+  }
 })
 
 async function land(result: SignInResult) {

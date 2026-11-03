@@ -98,28 +98,61 @@ async function turnOff() {
           <UAlert color="error" variant="subtle" :title="policyProblem" />
           <UButton label="Retry" class="w-fit" @click="retryPolicy" />
         </div>
-        <UPageCard v-if="showSection" title="Two-factor authentication" description="A code from an authenticator app at every sign-in, after your password or emailed code." variant="subtle">
+        <UPageCard
+          v-if="showSection"
+          title="Two-factor authentication"
+          description="A code from an authenticator app at every sign-in, after your password or emailed code."
+          variant="subtle"
+        >
           <div class="flex flex-col gap-4">
             <div class="flex items-center gap-3 text-sm">
               <UBadge :color="hasFactor ? 'success' : 'neutral'" variant="subtle" :label="hasFactor ? 'On' : 'Off'" />
               <span v-if="policy === 'required'" class="text-muted">Required by {{ starter.name }}</span>
             </div>
 
-            <UButton v-if="view === 'off' && canSetUp" label="Set up" class="w-fit" @click="startSetup" />
+            <UButton
+              v-if="view === 'off' && canSetUp"
+              label="Set up"
+              class="w-fit"
+              @click="startSetup"
+            />
             <AuthTotpEnroll v-else-if="view === 'enrolling' && canSetUp" @confirmed="enrolled" @failed="enrolFailed" />
             <AuthRecoveryCodes v-else-if="view === 'codes'" :codes="codes" @done="fromIdentity" />
-            <UButton v-else-if="view === 'on' && canTurnOff" label="Turn off" color="error" variant="outline" class="w-fit" @click="startTurnOff" />
+            <UButton
+              v-else-if="view === 'on' && canTurnOff"
+              label="Turn off"
+              color="error"
+              variant="outline"
+              class="w-fit"
+              @click="startTurnOff"
+            />
             <form v-else-if="view === 'turning_off' && canTurnOff" class="flex flex-col gap-4 max-w-xs" @submit.prevent="turnOff">
               <UFormField label="Current code">
                 <AuthCodeInput v-model="code" :disabled="busy" />
               </UFormField>
               <div class="flex gap-2">
-                <UButton type="submit" label="Turn off" color="error" :loading="busy" :disabled="code.length !== 6" />
-                <UButton label="Cancel" color="neutral" variant="outline" @click="view = 'on'" />
+                <UButton
+                  type="submit"
+                  label="Turn off"
+                  color="error"
+                  :loading="busy"
+                  :disabled="code.length !== 6"
+                />
+                <UButton
+                  label="Cancel"
+                  color="neutral"
+                  variant="outline"
+                  @click="view = 'on'"
+                />
               </div>
             </form>
 
-            <UAlert v-if="problem" color="error" variant="subtle" :title="problem" />
+            <UAlert
+              v-if="problem"
+              color="error"
+              variant="subtle"
+              :title="problem"
+            />
           </div>
         </UPageCard>
       </div>
