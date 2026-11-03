@@ -1,5 +1,5 @@
 import { FleetlessError, type SignInMethods } from '@fleetless/sdk'
-import { sentenceFor } from '~/utils/errors'
+import { knownSentenceFor } from '~/utils/errors'
 
 /** What the sign-in form reads: which methods are on, and nothing else. */
 export type LoginMethods = Pick<SignInMethods, 'password' | 'emailCode'>
@@ -31,7 +31,11 @@ export function requireSignInMethods(value: unknown): SignInMethods {
   return { ...methods, twoFactor }
 }
 
-/** A refusal keeps its own sentence (`rate_limited` its wait); no answer, or no valid one, says `fallback`. */
+/**
+ * A refusal `sentenceFor` names keeps its own sentence (`rate_limited` its
+ * wait). Anything else — no answer, a server error, an unparseable or empty
+ * answer, no valid policy — says `fallback`.
+ */
 export function readProblem(error: unknown, fallback: string): string {
-  return error instanceof FleetlessError ? sentenceFor(error) : fallback
+  return (error instanceof FleetlessError ? knownSentenceFor(error) : null) ?? fallback
 }

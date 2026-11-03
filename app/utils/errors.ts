@@ -36,6 +36,15 @@ export function twoFactorConflict(error: unknown): 'required' | 'off' | null {
  */
 export function sentenceFor(error: unknown): string {
   if (!(error instanceof FleetlessError)) return 'The request did not go through.'
+  return knownSentenceFor(error) ?? `The request was refused (${error.code}).`
+}
+
+/**
+ * `sentenceFor`'s own sentence for a code it names, or `null` for any other
+ * code — a server error, an unparseable or empty answer — where a caller's
+ * own sentence says more than the bare code.
+ */
+export function knownSentenceFor(error: FleetlessError): string | null {
   const details = error.details as Record<string, unknown> | undefined
   switch (error.code) {
     case 'invalid_credentials': return 'That email and password do not match.'
@@ -93,7 +102,7 @@ export function sentenceFor(error: unknown): string {
     case 'state_mismatch': return 'The sign-in did not come back the way it left. Start again.'
     case 'command_timeout': return 'The robot did not finish in time.'
     case 'no_websocket': return 'This browser has no WebSocket.'
-    default: return `The request was refused (${error.code}).`
+    default: return null
   }
 }
 

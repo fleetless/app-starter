@@ -79,11 +79,17 @@ describe('Account › Security', () => {
     expect(button(page, 'Turn off')).toBeDefined()
   })
 
-  it('a refused policy read keeps the refusal\'s own sentence', async () => {
-    fake.auth!.signInMethods.mockRejectedValueOnce(refusal('rate_limited', { retry_after_ms: 5000 }, 429))
+  it.each([
+    ['rate_limited', { retry_after_ms: 5000 }, 429, 'Too many attempts. Try again in 5 seconds.'],
+    ['not_found', undefined, 404, 'That does not exist, or you cannot reach it.'],
+    ['internal_error', undefined, 500, 'Could not read this app\'s two-factor policy. Try again.'],
+    ['unparseable_error', undefined, 502, 'Could not read this app\'s two-factor policy. Try again.'],
+    ['unexpected_response', undefined, 200, 'Could not read this app\'s two-factor policy. Try again.']
+  ])('a %s read says its own sentence, or the page\'s', async (code, details, status, sentence) => {
+    fake.auth!.signInMethods.mockRejectedValueOnce(refusal(code, details, status))
     const page = await mountWith(false)
-    expect(page.text()).toContain('Too many attempts. Try again in 5 seconds.')
-    expect(page.text()).not.toContain('Could not read')
+    expect(page.text()).toContain(sentence)
+    expect(page.text()).not.toContain('The request was refused')
     expect(button(page, 'Set up')).toBeUndefined()
     expect(button(page, 'Retry')).toBeDefined()
   })
