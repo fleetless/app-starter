@@ -15,7 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fleetless/sdk": "github:fleetless/sdk#ada96a0859ff1404b90488e81fb02f77237665fa",
+    "@fleetless/sdk": "4.6.0",
     "@iconify-json/lucide": "^1.2.131",
     "@nuxt/ui": "^4.11.1",
     "@vueuse/core": "^14.4.0",

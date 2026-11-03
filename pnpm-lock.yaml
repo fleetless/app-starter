@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@fleetless/sdk':
-        specifier: github:fleetless/sdk#ada96a0859ff1404b90488e81fb02f77237665fa
-        version: https://codeload.github.com/fleetless/sdk/tar.gz/ada96a0859ff1404b90488e81fb02f77237665fa
+        specifier: 4.6.0
+        version: 4.6.0
       '@iconify-json/lucide':
         specifier: ^1.2.131
         version: 1.2.133
@@ -829,9 +829,8 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@fleetless/sdk@https://codeload.github.com/fleetless/sdk/tar.gz/ada96a0859ff1404b90488e81fb02f77237665fa':
-    resolution: {gitHosted: true, integrity: sha512-LEMhQ5WZKRSbvCGnUFPFaeG01a/P40LmyDHY+B/Ao9Pux+UYBQLrQf4vv/Ppzqq5Hw90ArKA883dP5DWO9t5cw==, tarball: https://codeload.github.com/fleetless/sdk/tar.gz/ada96a0859ff1404b90488e81fb02f77237665fa}
-    version: 4.5.0
+  '@fleetless/sdk@4.6.0':
+    resolution: {integrity: sha512-miIC91sGQ6U3YwU3TW6XQ0rcAA88QHmp/qMTZLwpsVEAkgG0t6mqoAJCE3oNiH5dEWMFyQs1V7z3RBy+OxkrVQ==}
     engines: {node: '>=20'}
 
   '@floating-ui/core@1.8.0':
@@ -6195,7 +6194,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@fleetless/sdk@https://codeload.github.com/fleetless/sdk/tar.gz/ada96a0859ff1404b90488e81fb02f77237665fa':
+  '@fleetless/sdk@4.6.0':
     dependencies:
       zod: 4.6.5
 

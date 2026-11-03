@@ -19,7 +19,7 @@ copy has to change.
 
 - Policy reads that fail or omit a valid two-factor policy show Retry and
   withhold Security actions and invitation acceptance until a successful read.
-- The SDK dependency is updated for `SignInMethods.twoFactor`.
+- The SDK dependency is pinned to 4.6.0 for `SignInMethods.twoFactor`.
 - `AGENT-SETUP.md` now calls the bundled MCP tools with explicit actions and
   looks up each action's exact inputs with `docs.describe` before using it.
 - `sdk-bump.yml` pins an `@fleetless/sdk` version only once it is promoted
