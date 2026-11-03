@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { FleetlessError } from '@fleetless/sdk'
+import { FleetlessError, type SignInMethods } from '@fleetless/sdk'
 
 /** An `auth` namespace whose every method is a spy; a test overrides what it needs. */
 export function fakeAuth() {
@@ -8,7 +8,7 @@ export function fakeAuth() {
     login: vi.fn(),
     requestLoginCode: vi.fn(async () => {}),
     verifyLoginCode: vi.fn(),
-    signInMethods: vi.fn(async () => ({ password: true, emailCode: false })),
+    signInMethods: vi.fn(async (): Promise<SignInMethods> => ({ password: true, emailCode: false, twoFactor: 'optional' })),
     listProviders: vi.fn(async () => []),
     acceptInvitation: vi.fn(),
     verifyEmail: vi.fn(),

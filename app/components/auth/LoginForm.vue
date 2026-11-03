@@ -16,7 +16,7 @@ const emit = defineEmits<{ signedIn: [] }>()
 
 const client = useFleetless()
 const { follow } = useSignInResult()
-const methods = ref<SignInMethods>({ password: true, emailCode: false })
+const methods = ref<SignInMethods>({ password: true, emailCode: false, twoFactor: 'optional' })
 const codeFor = ref<string | null>(null)
 
 const emailOnly = z.object({ email: z.string().trim().email('An email address, please.') })

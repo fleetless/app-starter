@@ -17,7 +17,7 @@ describe('accepting an invitation', () => {
   })
 
   it('invitation without password: a code-only app asks for no password and sends none', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' })
     const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
     await flushPromises()
     expect(page.find('input[type="password"]').exists()).toBe(false)
@@ -35,7 +35,7 @@ describe('accepting an invitation', () => {
   })
 
   it('a required second factor goes on to setup', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' })
     fake.auth!.acceptInvitation.mockResolvedValue({ status: 'two_factor_setup_required', challenge: 'ch-7' })
     const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
     await flushPromises()

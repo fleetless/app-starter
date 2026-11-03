@@ -34,7 +34,7 @@ describe('the sign-in form per method', () => {
   })
 
   it('both: password, plus the code link', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: true, twoFactor: 'optional' })
     const form = await mountSuspended(LoginForm)
     await flushPromises()
     expect(form.find('input[type="password"]').exists()).toBe(true)
@@ -42,7 +42,7 @@ describe('the sign-in form per method', () => {
   })
 
   it('code only: no password field, and "Email me a code"', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' })
     const form = await mountSuspended(LoginForm)
     await flushPromises()
     expect(form.find('input[type="password"]').exists()).toBe(false)
@@ -51,7 +51,7 @@ describe('the sign-in form per method', () => {
 })
 
 describe('code sign-in', () => {
-  beforeEach(() => fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true }))
+  beforeEach(() => fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' }))
 
   async function requestCode(email: string) {
     const form = await mountSuspended(LoginForm, { props: { next: '/robots/r1' } })
