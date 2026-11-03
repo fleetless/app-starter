@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { ProviderButton, SignInMethods, SignInResult } from '@fleetless/sdk'
+import type { ProviderButton, SignInResult } from '@fleetless/sdk'
 import { sentenceFor } from '~/utils/errors'
 import { rememberOidc } from '~/utils/oidc'
-import { requireSignInMethods } from '~/utils/sign-in-methods'
+import { loginMethodsFrom, type LoginMethods } from '~/utils/sign-in-methods'
 import { STORAGE_REFUSED } from '~/composables/useSignInResult'
 
 const props = defineProps<{
@@ -17,7 +17,7 @@ const emit = defineEmits<{ signedIn: [] }>()
 
 const client = useFleetless()
 const { follow } = useSignInResult()
-const methods = ref<SignInMethods>({ password: true, emailCode: false, twoFactor: 'optional' })
+const methods = ref<LoginMethods>({ password: true, emailCode: false })
 const codeFor = ref<string | null>(null)
 
 const emailOnly = z.object({ email: z.string().trim().email('An email address, please.') })
@@ -33,14 +33,9 @@ onMounted(async () => {
   const [listed, offered] = await Promise.allSettled([client.auth.listProviders(), client.auth.signInMethods()])
   // No provider list is no buttons; no method list is today's password form.
   providers.value = listed.status === 'fulfilled' ? listed.value : []
-  if (offered.status === 'fulfilled') {
-    try {
-      const read = requireSignInMethods(offered.value)
-      if (read.password || read.emailCode) methods.value = read
-    } catch {
-      // An older Cloud response is as unreadable as a failed request.
-    }
-  }
+  // The two-factor policy is not this form's question; a cloud without one keeps its methods.
+  const read = offered.status === 'fulfilled' ? loginMethodsFrom(offered.value) : null
+  if (read && (read.password || read.emailCode)) methods.value = read
 })
 
 async function land(result: SignInResult) {

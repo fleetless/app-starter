@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises, type DOMWrapper } from '@vue/test-utils'
+import type { SignInMethods } from '@fleetless/sdk'
 import { fakeAuth, refusal } from './fake-auth'
 import SecurityPage from '~/pages/account/security.vue'
 
@@ -58,13 +59,49 @@ describe('Account › Security', () => {
     expect(button(page, 'Set up')).toBeDefined()
   })
 
+  it('twoFactor null is a failed read, never off: an enrolled person gets no Turn off', async () => {
+    fake.auth!.signInMethods.mockResolvedValueOnce({ password: true, emailCode: false, twoFactor: null } as never)
+    const page = await mountWith(true)
+    expect(page.text()).toContain('Could not read this app\'s two-factor policy. Try again.')
+    expect(page.text()).not.toContain('Two-factor authentication')
+    expect(button(page, 'Turn off')).toBeUndefined()
+    expect(button(page, 'Retry')).toBeDefined()
+  })
+
   it('a rejected policy read has no action until Retry succeeds', async () => {
     fake.auth!.signInMethods.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     const page = await mountWith(true)
+    expect(page.text()).toContain('Could not read this app\'s two-factor policy. Try again.')
     expect(button(page, 'Turn off')).toBeUndefined()
     expect(button(page, 'Retry')).toBeDefined()
     await button(page, 'Retry')!.trigger('click')
     await flushPromises()
+    expect(button(page, 'Turn off')).toBeDefined()
+  })
+
+  it('a refused policy read keeps the refusal\'s own sentence', async () => {
+    fake.auth!.signInMethods.mockRejectedValueOnce(refusal('rate_limited', { retry_after_ms: 5000 }, 429))
+    const page = await mountWith(false)
+    expect(page.text()).toContain('Too many attempts. Try again in 5 seconds.')
+    expect(page.text()).not.toContain('Could not read')
+    expect(button(page, 'Set up')).toBeUndefined()
+    expect(button(page, 'Retry')).toBeDefined()
+  })
+
+  it('overlapping reads: only the latest lands, a slower earlier one is dropped', async () => {
+    fake.auth!.signInMethods.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    const page = await mountWith(true)
+    const reads: ((methods: SignInMethods) => void)[] = []
+    fake.auth!.signInMethods.mockImplementation(() => new Promise(resolve => reads.push(resolve)))
+    const retry = button(page, 'Retry')!
+    await retry.trigger('click')
+    await retry.trigger('click')
+    expect(reads).toHaveLength(2)
+    reads[1]!({ password: true, emailCode: false, twoFactor: 'optional' })
+    await flushPromises()
+    reads[0]!({ password: true, emailCode: false, twoFactor: 'required' })
+    await flushPromises()
+    expect(page.text()).not.toContain('Required by')
     expect(button(page, 'Turn off')).toBeDefined()
   })
 

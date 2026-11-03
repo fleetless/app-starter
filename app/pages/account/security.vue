@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SignInMethods } from '@fleetless/sdk'
 import { sentenceFor, twoFactorConflict } from '~/utils/errors'
-import { requireSignInMethods } from '~/utils/sign-in-methods'
+import { readProblem, requireSignInMethods } from '~/utils/sign-in-methods'
 
 type View = 'off' | 'enrolling' | 'codes' | 'on' | 'turning_off'
 
@@ -22,13 +22,18 @@ const showSection = computed(() => policy.value !== null && (policy.value !== 'o
 const canSetUp = computed(() => !hasFactor.value && (policy.value === 'optional' || policy.value === 'required'))
 const canTurnOff = computed(() => hasFactor.value && policy.value !== null && policy.value !== 'required')
 
+let policyRead = 0
+
+/** Only the latest read lands: a slower one still in flight is dropped, never written over a newer answer. */
 async function retryPolicy() {
+  const read = ++policyRead
   policy.value = null
   policyProblem.value = null
   try {
-    policy.value = requireSignInMethods(await client.auth.signInMethods()).twoFactor
-  } catch {
-    policyProblem.value = 'Could not read this app\'s two-factor policy. Try again.'
+    const twoFactor = requireSignInMethods(await client.auth.signInMethods()).twoFactor
+    if (read === policyRead) policy.value = twoFactor
+  } catch (error) {
+    if (read === policyRead) policyProblem.value = readProblem(error, 'Could not read this app\'s two-factor policy. Try again.')
   }
 }
 

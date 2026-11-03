@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
-import { fakeAuth } from './fake-auth'
+import { fakeAuth, refusal } from './fake-auth'
 import InvitePage from '~/pages/auth/invite/[token].vue'
 
 const fake = vi.hoisted(() => ({ auth: null as ReturnType<typeof fakeAuth> | null, navigate: vi.fn() }))
@@ -85,6 +85,7 @@ describe('accepting an invitation', () => {
     fake.auth!.signInMethods.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
     await flushPromises()
+    expect(page.text()).toContain('Could not read this app\'s sign-in methods and two-factor policy. Try again.')
     expect(page.find('form').exists()).toBe(false)
     expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
     const retry = page.findAll('button').find(button => button.text() === 'Retry')!
@@ -93,5 +94,15 @@ describe('accepting an invitation', () => {
     await flushPromises()
     expect(fake.auth!.acceptInvitation).not.toHaveBeenCalled()
     expect(page.find('form').exists()).toBe(true)
+  })
+
+  it('a refused read keeps the refusal\'s own sentence', async () => {
+    fake.auth!.signInMethods.mockRejectedValueOnce(refusal('rate_limited', { retry_after_ms: 5000 }, 429))
+    const page = await mountSuspended(InvitePage, { route: '/auth/invite/tok-1' })
+    await flushPromises()
+    expect(page.text()).toContain('Too many attempts. Try again in 5 seconds.')
+    expect(page.text()).not.toContain('Could not read')
+    expect(page.find('form').exists()).toBe(false)
+    expect(page.findAll('button').some(button => button.text() === 'Retry')).toBe(true)
   })
 })

@@ -33,8 +33,23 @@ describe('the sign-in form per method', () => {
     expect(form.find('input[type="password"]').exists()).toBe(true)
   })
 
-  it('missing twoFactor is treated as an unreadable method response', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true } as never)
+  // A cloud from before the policy answers without `two_factor`; the SDK maps
+  // that to `twoFactor: undefined` without throwing. The form never needed it.
+  it.each([undefined, null, 'bogus'])('code only without a valid twoFactor (%s): still the code sign-in', async (twoFactor) => {
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor } as never)
+    const form = await mountSuspended(LoginForm)
+    await flushPromises()
+    expect(form.find('input[type="password"]').exists()).toBe(false)
+    expect(button(form, 'Email me a code')).toBeDefined()
+    await form.find('input[type="email"]').setValue('ann@example.com')
+    await form.find('form').trigger('submit')
+    await flushPromises()
+    expect(fake.auth!.requestLoginCode).toHaveBeenCalledWith('ann@example.com')
+    expect(fake.auth!.login).not.toHaveBeenCalled()
+  })
+
+  it('unreadable password or emailCode → password form', async () => {
+    fake.auth!.signInMethods.mockResolvedValue({ password: 'no', emailCode: true, twoFactor: 'optional' } as never)
     const form = await mountSuspended(LoginForm)
     await flushPromises()
     expect(form.find('input[type="password"]').exists()).toBe(true)

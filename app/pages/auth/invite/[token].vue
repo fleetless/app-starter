@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SignInMethods } from '@fleetless/sdk'
-import { requireSignInMethods } from '~/utils/sign-in-methods'
+import { readProblem, requireSignInMethods } from '~/utils/sign-in-methods'
 
 definePageMeta({ layout: 'auth' })
 const client = useFleetless()
@@ -17,8 +17,8 @@ async function loadMethods() {
   policyProblem.value = null
   try {
     methods.value = requireSignInMethods(await client.auth.signInMethods())
-  } catch {
-    policyProblem.value = 'Could not read this app\'s sign-in methods and two-factor policy. Try again.'
+  } catch (error) {
+    policyProblem.value = readProblem(error, 'Could not read this app\'s sign-in methods and two-factor policy. Try again.')
   } finally {
     loading.value = false
   }
