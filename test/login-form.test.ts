@@ -33,8 +33,30 @@ describe('the sign-in form per method', () => {
     expect(form.find('input[type="password"]').exists()).toBe(true)
   })
 
+  // A cloud from before the policy answers without `two_factor`; the SDK maps
+  // that to `twoFactor: undefined` without throwing. The form never needed it.
+  it.each([undefined, null, 'bogus'])('code only without a valid twoFactor (%s): still the code sign-in', async (twoFactor) => {
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor } as never)
+    const form = await mountSuspended(LoginForm)
+    await flushPromises()
+    expect(form.find('input[type="password"]').exists()).toBe(false)
+    expect(button(form, 'Email me a code')).toBeDefined()
+    await form.find('input[type="email"]').setValue('ann@example.com')
+    await form.find('form').trigger('submit')
+    await flushPromises()
+    expect(fake.auth!.requestLoginCode).toHaveBeenCalledWith('ann@example.com')
+    expect(fake.auth!.login).not.toHaveBeenCalled()
+  })
+
+  it('unreadable password or emailCode → password form', async () => {
+    fake.auth!.signInMethods.mockResolvedValue({ password: 'no', emailCode: true, twoFactor: 'optional' } as never)
+    const form = await mountSuspended(LoginForm)
+    await flushPromises()
+    expect(form.find('input[type="password"]').exists()).toBe(true)
+  })
+
   it('both: password, plus the code link', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: true, emailCode: true, twoFactor: 'optional' })
     const form = await mountSuspended(LoginForm)
     await flushPromises()
     expect(form.find('input[type="password"]').exists()).toBe(true)
@@ -42,7 +64,7 @@ describe('the sign-in form per method', () => {
   })
 
   it('code only: no password field, and "Email me a code"', async () => {
-    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true })
+    fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' })
     const form = await mountSuspended(LoginForm)
     await flushPromises()
     expect(form.find('input[type="password"]').exists()).toBe(false)
@@ -51,7 +73,7 @@ describe('the sign-in form per method', () => {
 })
 
 describe('code sign-in', () => {
-  beforeEach(() => fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true }))
+  beforeEach(() => fake.auth!.signInMethods.mockResolvedValue({ password: false, emailCode: true, twoFactor: 'optional' }))
 
   async function requestCode(email: string) {
     const form = await mountSuspended(LoginForm, { props: { next: '/robots/r1' } })

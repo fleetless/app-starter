@@ -9,8 +9,19 @@ copy has to change.
 
 ## [Unreleased]
 
+### Added
+
+- Account › Security now shows the app's two-factor policy before setup or
+  removal, including its required label. Invitations announce required setup
+  before acceptance.
+
 ### Changed
 
+- Policy reads that fail or omit a valid two-factor policy show Retry and
+  withhold Security actions and invitation acceptance until a successful read.
+  A refused read keeps its own sentence, such as a rate limit's wait. The
+  sign-in form does not need the policy and keeps working without one.
+- The SDK dependency is pinned to 4.6.0 for `SignInMethods.twoFactor`.
 - `AGENT-SETUP.md` now calls the bundled MCP tools with explicit actions and
   looks up each action's exact inputs with `docs.describe` before using it.
 - `sdk-bump.yml` pins an `@fleetless/sdk` version only once it is promoted

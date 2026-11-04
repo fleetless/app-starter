@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FleetlessError } from '@fleetless/sdk'
-import { fieldErrorsFrom, isDeadCode, isSignedOut, sentenceFor, twoFactorConflict } from '~/utils/errors'
+import { fieldErrorsFrom, isDeadCode, isSignedOut, knownSentenceFor, sentenceFor, twoFactorConflict } from '~/utils/errors'
 
 describe('sentenceFor', () => {
   it('says one sentence for invalid_credentials, whatever the cause', () => {
@@ -55,6 +55,16 @@ describe('sentenceFor', () => {
   it('falls back to what did not happen, never to the server message', () => {
     expect(sentenceFor(new Error('ECONNREFUSED'))).toBe('The request did not go through.')
     expect(sentenceFor(new FleetlessError('some_new_code', 'server text'))).toBe('The request was refused (some_new_code).')
+  })
+})
+
+describe('knownSentenceFor', () => {
+  it('has a sentence only for a code sentenceFor names; a server or parse error has none', () => {
+    expect(knownSentenceFor(new FleetlessError('rate_limited', 'slow down', { status: 429 }))).toBe('Too many attempts. Try again in a moment.')
+    expect(knownSentenceFor(new FleetlessError('forbidden', 'no', { status: 403 }))).toBe('Your role does not allow that.')
+    for (const code of ['internal_error', 'unparseable_error', 'unexpected_response', 'some_new_code']) {
+      expect(knownSentenceFor(new FleetlessError(code, 'server text')), code).toBeNull()
+    }
   })
 })
 
