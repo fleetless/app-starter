@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-11-04
+
 ### Added
 
 - Account › Security now shows the app's two-factor policy before setup or
