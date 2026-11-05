@@ -16,13 +16,17 @@ the people you invite can reach).
 It cannot choose a password — the invitation is where the person sets one,
 when the app signs in by password — and it cannot publish a robot that
 exposes nothing. A robot whose configuration has no datapoints, actions,
-services, publishers or cameras is attached, granted nothing, and named in
-the report.
+services, publishers or cameras is attached and named in the report.
+
+The first user holds the organization role `operate`, which every organization
+starts with. What that role reaches follows each robot's `fleetless.yaml` and
+the organization's defaults, so the agent grants nothing per robot; if the
+role is gone, it asks which role key to use instead.
 
 ## The prompt
 
 ```text
-You are setting up a Fleetless app for the app-starter template using the Fleetless MCP tools on the central endpoint. Call docs with action describe before the first use of each action to read its exact inputs and conditions. Work through the steps in order, call the tools rather than describing them, ask me only the questions in step 1, and invent no values. If a tool refuses, stop, quote the code and the sentence it returned, and ask me how to continue.
+You are setting up a Fleetless app for the app-starter template using the Fleetless MCP tools on the central endpoint. Call docs with action describe before the first use of each action to read its exact inputs and conditions. Work through the steps in order, call the tools rather than describing them, ask me only the questions in step 1 and the role question in step 4, and invent no values. If a tool refuses, stop, quote the code and the sentence it returned, and ask me how to continue.
 
 1. Ask me for, in one message:
    (a) the app name;
@@ -40,17 +44,17 @@ You are setting up a Fleetless app for the app-starter template using the Fleetl
    - action set_mcp: mcp_enabled true
    - only if I said yes in (g), action set_urls: app_url exactly as read, invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}; otherwise leave the URLs unset, and Fleetless's hosted pages answer those links
 
-4. Create a role named "Operator" with console_roles_write, action create, and keep its id. For every attached robot call console_robots_read, action exposures, and collect its slugs. Then call console_roles_write, action set_permissions, once, with one grant per robot carrying all of that robot's slugs, and the capabilities action_history, presence and assets all true. A robot with no exposures gets no grant; note it for the report.
+4. Use the organization role with the key operate. Call console_roles_read with action list. If no role has the key operate, stop and ask me which role key the first user should hold, and use that key wherever the steps below say operate. Under the organization's defaults, operate reaches the datapoints, cameras, assets, services, actions, publishers and job history of every attached robot, and it holds observe by inheritance.
 
-5. Make that role the app's default with console_apps_write, action update, default_role_id.
+5. Make that role the app's default: call console_apps_read with action access for the app, then console_apps_write with action set_access, default_role set to that key, and locked_kinds and locked exactly as access returned them.
 
-6. Invite the first user with console_app_users_write, action invite: the email from (e), role_id of the Operator role, send_mail true if I chose mail in (f), otherwise false.
+6. Invite the first user with console_app_users_write, action invite: the email from (e), role set to that key, send_mail true if I chose mail in (f), otherwise false.
 
 7. Report, and nothing else:
    - the line for .env: NUXT_PUBLIC_APP_IDENTIFIER=<identifier>
    - the invitation: "mailed to <email>", or the accept_url exactly as returned
    - whether the mailed links open in this app or on Fleetless's hosted pages
-   - every robot that was attached and what it was granted, and any robot that exposes nothing
+   - for every attached robot, what that role reaches (console_roles_read, action effective_rights, with the app id and the role), and any robot that exposes nothing
    - anything that was refused, with the code and the sentence
 ```
 

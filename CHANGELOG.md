@@ -9,6 +9,17 @@ copy has to change.
 
 ## [Unreleased]
 
+### Changed
+
+- `AGENT-SETUP.md` and the README use organization roles. The prompt no longer
+  creates an Operator role with per-robot grants: it reads the organization's
+  roles, uses `operate`, sets it as the app's `default_role` with `set_access`,
+  invites the first user with that role, and reports what the role reaches on
+  every attached robot with `effective_rights`. The README's Settings and
+  Roles steps become the Access and Roles steps: the default role is on the
+  app's Access page, and rights live in each robot's `fleetless.yaml` and the
+  organization's defaults. Needs a Fleetless cloud with organization roles.
+
 ## [1.4.0] — 2026-11-04
 
 ### Added
