@@ -18,9 +18,9 @@ when the app signs in by password — and it cannot publish a robot that
 exposes nothing. A robot whose configuration has no datapoints, actions,
 services, publishers or cameras is attached and named in the report.
 
-The first user holds the organization role `operate`, which every organization
+The first user holds the organisation role `operate`, which every organisation
 starts with. What that role reaches follows each robot's `fleetless.yaml` and
-the organization's defaults, so the agent grants nothing per robot; if the
+the organisation's defaults, so the agent grants nothing per robot; if the
 role is gone, it asks which role key to use instead.
 
 ## The prompt
@@ -44,7 +44,7 @@ You are setting up a Fleetless app for the app-starter template using the Fleetl
    - action set_mcp: mcp_enabled true
    - only if I said yes in (g), action set_urls: app_url exactly as read, invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}; otherwise leave the URLs unset, and Fleetless's hosted pages answer those links
 
-4. Use the organization role with the key operate. Call console_roles_read with action list. If no role has the key operate, stop and ask me which role key the first user should hold, and use that key wherever the steps below say operate. Under the organization's defaults, operate reaches the datapoints, cameras, assets, services, actions, publishers and job history of every attached robot, and it holds observe by inheritance.
+4. Use the organization role with the key operate. Call console_roles_read with action list. If no role has the key operate, stop and ask me which role key the first user should hold, and use that key wherever the steps below say operate. Under the organization's defaults, operate reaches the datapoints, cameras, assets, services, actions, publishers and job history of every attached robot unless a robot's fleetless.yaml asks for a stricter role, and it holds observe by inheritance.
 
 5. Make that role the app's default: call console_apps_read with action access for the app, then console_apps_write with action set_access, default_role set to that key, and locked_kinds and locked exactly as access returned them.
 
