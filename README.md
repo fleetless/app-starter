@@ -79,6 +79,53 @@ you can tell a missing setting from a broken app.
 
 Then sign in. The robot appears; click it.
 
+## 📒 Data: collections
+
+A robot is not the only thing an app keeps track of. [`collections.yaml`](collections.yaml)
+is the schema of the app's own data: collections of records, their fields,
+and the roles that may read and write them. There is one such document per
+app. The starter ships one collection, a `logbook` that belongs to robots, and
+the **Logbook** tab on the robot page reads it, follows it live and adds
+entries to it. The tab sits after the others on every robot where the role
+shows something. Until a schema is published it says
+`No logbook yet. Publish collections.yaml to add one.`
+
+Nothing is stored until a developer publishes the schema. Do it in the
+console, or with an assistant on the central MCP endpoint, the one
+[`AGENT-SETUP.md`](AGENT-SETUP.md) uses:
+
+1. `console_collections_write`, action `draft_put`, with the text of
+   `collections.yaml` for your app. A document that is not valid is refused
+   with the path of the fault; a valid one is answered with its preview.
+2. `console_collections_write`, action `publish`. A publish that would change
+   data already stored answers a preview first, with a `confirm` token: read
+   it, then call `publish` again with that token. The logbook has no stored
+   data to change, so its first publish goes through at once.
+
+Have the assistant call `docs` with action `describe` before each action, as
+`AGENT-SETUP.md` does; the exact inputs are there. `console_collections_read`
+shows the draft and the published versions.
+
+`access` in the file decides who may do what. It names the **role keys** of
+your organisation (`observe`, `operate` and `admin` unless you changed them):
+
+| Right | Granted to | What it means here |
+|---|---|---|
+| `read` | `observe`, `operate`, `admin` | See the entries of the robots they reach |
+| `create` | `operate`, `admin` | Use the form on the tab |
+| `update` | `admin` for every entry, `operate` for their own | Not used by the tab |
+| `delete` | `admin` | Not used by the tab |
+
+A right that is not listed goes to no role, and a key your organisation does
+not have grants nothing; the preview warns about it. Developers and server
+keys reach every record whatever `access` says. Rights take effect when you
+publish. A role without `read` sees the same `No logbook yet` as an app
+without a schema, because a collection nobody may read does not exist for
+them.
+
+What else a schema can hold, what a publish does to stored data, and import
+and export are in [App Data](https://docs.fleetless.dev/concepts/app-data/).
+
 ## 🎨 Make it yours
 
 - `app/app.config.ts` — the app's name, its description, the four brand
@@ -106,6 +153,9 @@ Then sign in. The robot appears; click it.
 | `app/pages/mcp/[interaction].vue` | The consent screen an AI tool sends its user to. |
 | `app/pages/robots/*` | The list, and the robot page whose tabs come from the datasheet. |
 | `app/components/robot/ParameterForm.vue` | A form from a datasheet's `input_schema`. |
+| `collections.yaml` | The schema of the app's own data: the logbook. Published in the console or by an agent. |
+| `app/composables/useLogbook.ts` | One robot's logbook: the list, then every change, and adding an entry. |
+| `app/components/robot/Logbook.vue` | The Logbook tab. |
 | `app/utils/errors.ts` | Every refusal's one sentence. |
 
 The SDK reference at [docs.fleetless.dev](https://docs.fleetless.dev/reference/sdk/)
