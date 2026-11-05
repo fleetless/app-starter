@@ -105,6 +105,7 @@ onMounted(reload)
         <RobotJobHistory v-else-if="active === 'activity'" :robot-id="robotId" />
         <RobotAssetList v-else-if="active === 'assets'" :robot-id="robotId" />
         <RobotModelView v-else-if="active === 'model'" :robot-id="robotId" :joint-states="grantsDatapoint(sheet, 'joint_states')" />
+        <RobotLogbook v-else-if="active === 'logbook'" :robot-id="robotId" />
       </template>
     </template>
   </UDashboardPanel>

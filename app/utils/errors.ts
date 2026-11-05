@@ -65,7 +65,13 @@ export function knownSentenceFor(error: FleetlessError): string | null {
     case 'quota_exceeded': return 'This app has reached its user limit.'
     // The plan is full, not the protection ceiling. Also the password
     // self-registration's `409 plan_limit`, so one sentence serves both doors.
-    case 'plan_limit': return 'This app has no room for another user on its plan.'
+    // The records a collection holds have their own two limits.
+    case 'plan_limit': {
+      const limit = details?.limit
+      return limit === 'collection_records' || limit === 'collection_bytes'
+        ? 'This app has no room for more data on its plan.'
+        : 'This app has no room for another user on its plan.'
+    }
     case 'weak_password': return 'That password is too short. Twelve characters or more.'
     case 'rate_limited': {
       // No number is better than a wrong one: "in 0 seconds" invites a retry
@@ -87,6 +93,11 @@ export function knownSentenceFor(error: FleetlessError): string | null {
       return `The app is not set up for this yet: ${field} is missing in the console.`
     }
     case 'forbidden': return 'Your role does not allow that.'
+    case 'required_missing': {
+      const fields = Array.isArray(details?.fields) ? (details.fields as unknown[]).filter(f => typeof f === 'string') : []
+      return fields.length > 0 ? `A required value is missing: ${fields.join(', ')}.` : 'A required value is missing.'
+    }
+    case 'record_changed': return 'This record changed since you read it.'
     case 'capability_required': return 'Your role does not include that capability.'
     case 'not_found': return 'That does not exist, or you cannot reach it.'
     case 'robot_offline': return 'The robot is offline.'

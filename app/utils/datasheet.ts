@@ -1,6 +1,6 @@
 import type { McpExposure, McpRobotDatasheet } from '@fleetless/sdk'
 
-export type TabKey = 'datapoints' | 'actions' | 'services' | 'publishers' | 'cameras' | 'activity' | 'assets' | 'model'
+export type TabKey = 'datapoints' | 'actions' | 'services' | 'publishers' | 'cameras' | 'activity' | 'assets' | 'model' | 'logbook'
 export interface TabSpec {
   key: TabKey
   label: string
@@ -24,7 +24,12 @@ export function grantsDatapoint(sheet: McpRobotDatasheet, slug: string): boolean
   return exposuresOf(sheet, 'datapoint').some(e => e.slug === slug)
 }
 
-/** The tabs a sheet earns: one per kind it grants, plus one per capability. A sheet granting nothing earns none. */
+/**
+ * The tabs a sheet earns: one per kind it grants, plus one per capability, plus
+ * the Logbook. A sheet granting nothing earns none. The Logbook is not a grant
+ * of the sheet but a collection: it is offered wherever the robot shows
+ * anything, and the collection's own `access` decides what it holds.
+ */
 export function tabsFor(sheet: McpRobotDatasheet): TabSpec[] {
   const tabs: TabSpec[] = []
   for (const tab of KIND_TABS) {
@@ -34,5 +39,6 @@ export function tabsFor(sheet: McpRobotDatasheet): TabSpec[] {
   if (sheet.capabilities.action_history) tabs.push({ key: 'activity', label: 'Activity', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'assets', label: 'Assets', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'model', label: '3D', count: null })
+  if (tabs.length > 0) tabs.push({ key: 'logbook', label: 'Logbook', count: null })
   return tabs
 }

@@ -13,25 +13,27 @@ describe('tabsFor', () => {
     const tabs = tabsFor(sheet([exposure('a', 'action'), exposure('b', 'datapoint'), exposure('c', 'datapoint')]))
     expect(tabs).toEqual([
       { key: 'datapoints', label: 'Datapoints', count: 2 },
-      { key: 'actions', label: 'Actions', count: 1 }
+      { key: 'actions', label: 'Actions', count: 1 },
+      { key: 'logbook', label: 'Logbook', count: null }
     ])
   })
 
-  it('adds Activity, Assets and 3D for the capabilities, without a count', () => {
+  it('adds Activity, Assets and 3D for the capabilities, and the Logbook last, without a count', () => {
     const tabs = tabsFor(sheet([], { action_history: true, assets: true }))
     expect(tabs).toEqual([
       { key: 'activity', label: 'Activity', count: null },
       { key: 'assets', label: 'Assets', count: null },
-      { key: 'model', label: '3D', count: null }
+      { key: 'model', label: '3D', count: null },
+      { key: 'logbook', label: 'Logbook', count: null }
     ])
   })
 
   it('offers no 3D tab without the assets capability', () => {
     const tabs = tabsFor(sheet([], { action_history: true, assets: false }))
-    expect(tabs.map(t => t.key)).toEqual(['activity'])
+    expect(tabs.map(t => t.key)).toEqual(['activity', 'logbook'])
   })
 
-  it('answers no tabs for a sheet that grants nothing', () => {
+  it('answers no tabs for a sheet that grants nothing, the Logbook included', () => {
     expect(tabsFor(sheet([]))).toEqual([])
   })
 })
