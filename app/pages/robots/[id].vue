@@ -4,9 +4,9 @@ import { exposuresOf, grantsDatapoint, tabsFor, type TabKey } from '~/utils/data
 
 const route = useRoute()
 const robotId = typeof route.params.id === 'string' ? route.params.id : ''
-const { sheet, loading, problem, reload } = useDatasheet(robotId)
+const { sheet, logbook, loading, problem, reload } = useDatasheet(robotId)
 
-const tabs = computed(() => sheet.value ? tabsFor(sheet.value) : [])
+const tabs = computed(() => sheet.value ? tabsFor(sheet.value, logbook.value) : [])
 const items = computed<TabsItem[]>(() => tabs.value.map(t => ({ label: t.count === null ? t.label : `${t.label} (${t.count})`, value: t.key })))
 const active = ref<TabKey | undefined>(undefined)
 // A reload can withdraw the open tab; land on the first one the sheet still grants.

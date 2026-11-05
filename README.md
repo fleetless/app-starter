@@ -87,8 +87,10 @@ and the roles that may read and write them. There is one such document per
 app. The starter ships one collection, a `logbook` that belongs to robots, and
 the **Logbook** tab on the robot page reads it, follows it live and adds
 entries to it. The tab sits after the others on every robot where the role
-shows something. Until a schema is published it says
-`No logbook yet. Publish collections.yaml to add one.`
+shows something, and on its own on a robot where the role may read the logbook
+and nothing else. Until a schema is published it says
+`No logbook yet. Publish collections.yaml to add one.`, and **Check again**
+reads it once more after you have published.
 
 Nothing is stored until a developer publishes the schema. Do it in the
 console, or with an assistant on the central MCP endpoint, the one
@@ -118,10 +120,10 @@ your organisation (`observe`, `operate` and `admin` unless you changed them):
 
 A right that is not listed goes to no role, and a key your organisation does
 not have grants nothing; the preview warns about it. Developers and server
-keys reach every record whatever `access` says. Rights take effect when you
-publish. A role without `read` sees the same `No logbook yet` as an app
-without a schema, because a collection nobody may read does not exist for
-them.
+keys reach the records of every robot attached to the app whatever `access`
+says. Rights take effect when you publish. A role without `read` sees the same
+`No logbook yet` as an app without a schema, because a collection their role
+may not read does not exist for them.
 
 What else a schema can hold, what a publish does to stored data, and import
 and export are in [App Data](https://docs.fleetless.dev/concepts/app-data/).

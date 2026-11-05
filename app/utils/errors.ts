@@ -63,9 +63,9 @@ export function knownSentenceFor(error: FleetlessError): string | null {
     case 'provider_disabled': return 'That provider is switched off for this app.'
     case 'invalid_request': return 'The sign-in request was malformed. Start again.'
     case 'quota_exceeded': return 'This app has reached its user limit.'
-    // The plan is full, not the protection ceiling. Also the password
-    // self-registration's `409 plan_limit`, so one sentence serves both doors.
-    // The records a collection holds have their own two limits.
+    // The plan is full, not the protection ceiling. The password
+    // self-registration's `409 plan_limit` is the user limit; the records a
+    // collection holds have their own two limits, and a sentence of their own.
     case 'plan_limit': {
       const limit = details?.limit
       return limit === 'collection_records' || limit === 'collection_bytes'

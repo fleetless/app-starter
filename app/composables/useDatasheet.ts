@@ -1,6 +1,7 @@
 import type { McpRobotDatasheet } from '@fleetless/sdk'
 import type { InjectionKey, Ref } from 'vue'
 import { FleetlessError } from '@fleetless/sdk'
+import { LOGBOOK_COLLECTION } from '~/utils/datasheet'
 import { sentenceFor } from '~/utils/errors'
 
 export interface RobotSheetContext {
@@ -20,6 +21,8 @@ export function useDatasheet(robotId: string) {
   const client = useFleetless()
   const { expire } = useSession()
   const sheet = ref<McpRobotDatasheet | null>(null)
+  /** Whether the role may read the logbook collection: the sheet does not say, the schema's own answer does. */
+  const logbook = ref(false)
   const loading = ref(false)
   const problem = ref<string | null>(null)
 
@@ -35,11 +38,26 @@ export function useDatasheet(robotId: string) {
     return inFlight
   }
 
+  /**
+   * `definitions` lists the collections the role may read, so the logbook is
+   * there or it is not. A failed read is "not readable" here and no failure of
+   * the page: the Logbook tab reads the schema itself and says what went wrong.
+   */
+  async function readsLogbook(): Promise<boolean> {
+    try {
+      return (await client.collections.definitions()).some(d => d.key === LOGBOOK_COLLECTION)
+    } catch {
+      return false
+    }
+  }
+
   async function read() {
     loading.value = true
     problem.value = null
     try {
-      sheet.value = await client.robots.describe(robotId)
+      const [described, readable] = await Promise.all([client.robots.describe(robotId), readsLogbook()])
+      sheet.value = described
+      logbook.value = readable
     } catch (error) {
       if (!(await expire(error, `/robots/${robotId}`))) problem.value = `The robot did not load. ${sentenceFor(error)}`
     } finally {
@@ -58,7 +76,7 @@ export function useDatasheet(robotId: string) {
 
   const context: RobotSheetContext = { sheet, reload, onError }
   provide(RobotSheet, context)
-  return { sheet, loading, problem, reload, onError }
+  return { sheet, logbook, loading, problem, reload, onError }
 }
 
 export function useRobotSheet(): RobotSheetContext {

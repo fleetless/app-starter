@@ -35,6 +35,16 @@ describe('tabsFor', () => {
 
   it('answers no tabs for a sheet that grants nothing, the Logbook included', () => {
     expect(tabsFor(sheet([]))).toEqual([])
+    expect(tabsFor(sheet([]), false)).toEqual([])
+  })
+
+  it('offers the Logbook on its own where the role may read it and the sheet grants nothing', () => {
+    expect(tabsFor(sheet([]), true)).toEqual([{ key: 'logbook', label: 'Logbook', count: null }])
+  })
+
+  it('puts the Logbook last once, whatever else the sheet earns', () => {
+    const tabs = tabsFor(sheet([exposure('a', 'datapoint')]), true)
+    expect(tabs.map(t => t.key)).toEqual(['datapoints', 'logbook'])
   })
 })
 

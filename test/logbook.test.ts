@@ -241,6 +241,133 @@ describe('RobotLogbook', () => {
     expect(page.text()).toContain('Charged')
   })
 
+  describe('when a read does not go through', () => {
+    const find = (page: Awaited<ReturnType<typeof mountLogbook>>, label: string) =>
+      page.findAll('button').find(b => b.text() === label)
+
+    it('a failed list read does not claim nothing was written, and Try again reads it again', async () => {
+      fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
+      const page = await mountLogbook()
+
+      // The schema was read, the list was not: the tab says so and does not call the logbook empty.
+      expect(page.text()).toContain('The request was refused (internal_error).')
+      expect(page.text()).not.toContain('Nothing written yet.')
+      expect(find(page, 'Try again')).toBeDefined()
+
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+
+      expect(fake.list).toHaveBeenCalledTimes(2)
+      expect(page.text()).toContain('Charged')
+      expect(page.text()).not.toContain('internal_error')
+      expect(find(page, 'Try again')).toBeUndefined()
+      // The subscription never ended, so it is not opened a second time.
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+
+    it('an empty list that was read still says nothing has been written', async () => {
+      fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
+      const page = await mountLogbook()
+      expect(page.text()).not.toContain('Nothing written yet.')
+
+      fake.list.mockResolvedValue({ records: [], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+
+      expect(page.text()).toContain('Nothing written yet.')
+    })
+
+    it('a failed schema read offers to try again as well', async () => {
+      fake.definitions.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
+      const page = await mountLogbook()
+
+      expect(page.text()).toContain('The request was refused (internal_error).')
+      expect(page.text()).not.toContain('Nothing written yet.')
+      expect(fake.list).not.toHaveBeenCalled()
+
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+
+      expect(page.find('textarea').exists()).toBe(true)
+      expect(page.text()).toContain('Nothing written yet.')
+    })
+
+    it('after a publish the empty state can be left: Check again reads and subscribes again', async () => {
+      fake.definitions.mockResolvedValue([])
+      const page = await mountLogbook()
+      // Before the first publish the cloud refuses the subscription, and the SDK lets it go.
+      fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
+      await flushPromises()
+      expect(page.text()).toContain('No logbook yet.')
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+
+      // The developer publishes collections.yaml and comes back to the tab.
+      fake.definitions.mockResolvedValue([definition()])
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Check again')!.trigger('click')
+      await flushPromises()
+
+      expect(page.text()).not.toContain('No logbook yet.')
+      expect(page.text()).toContain('Charged')
+      expect(page.find('textarea').exists()).toBe(true)
+      expect(fake.definitions).toHaveBeenCalledTimes(2)
+      // Subscribed first, so nothing between the two reads is lost, and the new subscription is the live one.
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.subscribe.mock.invocationCallOrder[1]).toBeLessThan(fake.list.mock.invocationCallOrder[0]!)
+      await send({ event: 'created', id: 'b', record: entry('b', 'Door sensor dirty', 9) })
+      expect(page.text()).toContain('Door sensor dirty')
+    })
+
+    it('Check again on an app that still has no logbook stays on the empty state', async () => {
+      fake.definitions.mockResolvedValue([])
+      const page = await mountLogbook()
+
+      await find(page, 'Check again')!.trigger('click')
+      await flushPromises()
+
+      expect(page.text()).toContain('No logbook yet. Publish collections.yaml to add one.')
+      expect(find(page, 'Check again')).toBeDefined()
+    })
+
+    it('a collection removed by a publish leaves the empty state, and Check again finds it back', async () => {
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      const page = await mountLogbook()
+      expect(page.text()).toContain('Charged')
+
+      fake.options?.onError?.(refusal('collection_removed', undefined, 404))
+      await flushPromises()
+      expect(page.text()).toContain('No logbook yet.')
+      expect(page.text()).not.toContain('Charged')
+
+      await find(page, 'Check again')!.trigger('click')
+      await flushPromises()
+
+      expect(page.text()).toContain('Charged')
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+    })
+
+    it('after forbidden the tab reads what the role may do now, without subscribing again', async () => {
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      const context = sheetContext()
+      const page = await mountLogbook(context)
+      expect(page.find('textarea').exists()).toBe(true)
+
+      // The role lost `create` and the cloud ended the subscription.
+      fake.definitions.mockResolvedValue([definition(false)])
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1), entry('b', 'Door sensor dirty', 9)], nextCursor: null })
+      fake.options?.onError?.(refusal('forbidden', undefined, 403))
+      await flushPromises()
+
+      expect(context.onError).toHaveBeenCalledTimes(1)
+      expect(fake.definitions).toHaveBeenCalledTimes(2)
+      expect(page.find('textarea').exists()).toBe(false)
+      expect(page.text()).toContain('Door sensor dirty')
+      // A role that cannot read would be refused again, and again.
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('adding an entry', () => {
     async function write(page: Awaited<ReturnType<typeof mountLogbook>>, text: string, category?: string) {
       await page.find('textarea').setValue(text)
@@ -377,7 +504,7 @@ describe('collections.yaml', () => {
   // `new URL('../x', import.meta.url)` to the wrong file under this environment.
   const text = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'collections.yaml'), 'utf8')
 
-  it('parses and is the logbook of the spec: per robot, three roles read, two write', () => {
+  it('parses and is the logbook of this template: per robot, three roles read, two write', () => {
     expect(parseYaml(text)).toEqual({
       format: 1,
       collections: {

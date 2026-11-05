@@ -1,8 +1,6 @@
 import type { CollectionDefinition, CollectionEvent, CollectionRecord } from '@fleetless/sdk'
+import { LOGBOOK_COLLECTION as COLLECTION } from '~/utils/datasheet'
 import { isSignedOut, sentenceFor } from '~/utils/errors'
-
-/** The collection `collections.yaml` defines. */
-const COLLECTION = 'logbook'
 
 /**
  * One robot's logbook, live: the newest entries, then every change to them.
@@ -17,6 +15,10 @@ export function useLogbook(robotId: string) {
   const defined = ref(false)
   const categories = ref<{ label: string, value: string }[]>([])
   const loaded = ref(false)
+  /** True once the list was read: only then is an empty list "nothing written yet" rather than "not known". */
+  const listed = ref(false)
+  /** The last read of the schema or the list did not go through: the tab offers to try again. */
+  const failed = ref(false)
   const problem = ref<string | null>(null)
   // Optional on purpose, as in `useDatapoint`: under the robot page a refusal
   // goes the way of every other tab (a lapsed session signs out, a `forbidden`
@@ -45,6 +47,7 @@ export function useLogbook(robotId: string) {
     const mine = ++generation
     waiting = []
     problem.value = null
+    failed.value = false
     try {
       const found = (await client.collections.definitions()).find(d => d.key === COLLECTION)
       // A newer load (a publish, say) has taken over: it drains `waiting`.
@@ -53,8 +56,11 @@ export function useLogbook(robotId: string) {
       const page = found ? await client.collections.list(COLLECTION, { robot: robotId, sort: ['-created_at'], limit: 50 }) : null
       if (mine !== generation) return
       entries.value = page?.records ?? []
+      listed.value = true
     } catch (error) {
       if (mine !== generation) return
+      failed.value = true
+      listed.value = false
       problem.value = await report(error)
     }
     const missed = waiting ?? []
@@ -103,29 +109,59 @@ export function useLogbook(robotId: string) {
     }
   }
 
-  const unsubscribe = client.collections.subscribe(COLLECTION, {
-    robot: robotId,
-    onError(error) {
-      // The collection is gone, or was never readable: the empty state says so.
-      if (error.code === 'collection_not_found' || error.code === 'collection_removed') {
-        read(undefined)
-        entries.value = []
-        loaded.value = true
-        return
-      }
-      void report(error).then((sentence) => {
-        problem.value = sentence
-      })
-    },
-    // Rights, fields and the data itself may have changed, and a publish sends no record events.
-    onSchemaPublished: () => void load()
-  }, (event) => {
-    if (waiting) waiting.push(event)
-    else apply(event)
-  })
+  // The codes with which the SDK ends a subscription (its `onError` says which): after one of these
+  // nothing more arrives, and only a new `subscribe` brings the tab live again.
+  const ENDS = new Set(['collection_not_found', 'collection_removed', 'forbidden', 'robot_not_attached', 'validation_error'])
+  let unsubscribe: () => void = () => {}
+  let live = false
+
+  function connect() {
+    // Harmless when the SDK has already ended it.
+    unsubscribe()
+    live = true
+    unsubscribe = client.collections.subscribe(COLLECTION, {
+      robot: robotId,
+      onError(error) {
+        if (ENDS.has(error.code)) live = false
+        // The collection is gone, or was never readable: the empty state says so.
+        if (error.code === 'collection_not_found' || error.code === 'collection_removed') {
+          read(undefined)
+          entries.value = []
+          loaded.value = true
+          return
+        }
+        void report(error).then((sentence) => {
+          problem.value = sentence
+          // A role change closed the subscription, and with it what the person may read and write may have
+          // changed: read it again so the tab does not go on showing what the role no longer reaches. Not a
+          // new subscription: a role that cannot read would be refused again, and again.
+          if (error.code === 'forbidden') void load()
+        })
+      },
+      // Rights, fields and the data itself may have changed, and a publish sends no record events. Only a
+      // running subscription hears of it: before the first publish the cloud refused this one, so the
+      // empty state offers `reload` instead.
+      onSchemaPublished: () => void load()
+    }, (event) => {
+      if (waiting) waiting.push(event)
+      else apply(event)
+    })
+  }
+
+  /**
+   * Reads the schema and the list again, and first subscribes again when the cloud ended the
+   * subscription (no collection yet, one removed, a role changed): what comes of the read is then live
+   * as well. For the buttons "Check again" and "Try again".
+   */
+  async function reload() {
+    if (!live) connect()
+    await load()
+  }
+
   // The scope, not the component: a tab unmounted inside a v-if still lets go.
-  onScopeDispose(unsubscribe)
+  onScopeDispose(() => unsubscribe())
+  connect()
   void load()
 
-  return { entries, canCreate, defined, categories, loaded, problem, add }
+  return { entries, canCreate, defined, categories, loaded, listed, failed, problem, add, reload }
 }

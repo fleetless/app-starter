@@ -2,7 +2,7 @@
 import type { CollectionRecord } from '@fleetless/sdk'
 
 const props = defineProps<{ robotId: string }>()
-const { entries, canCreate, defined, categories, loaded, problem, add } = useLogbook(props.robotId)
+const { entries, canCreate, defined, categories, loaded, listed, failed, problem, add, reload } = useLogbook(props.robotId)
 
 const text = ref('')
 const category = ref<string | undefined>(undefined)
@@ -43,12 +43,29 @@ const when = (entry: CollectionRecord) => new Date(entry.created_at).toLocaleStr
       variant="subtle"
       :title="problem"
     />
+    <UButton
+      v-if="failed"
+      label="Try again"
+      color="neutral"
+      variant="outline"
+      class="self-start"
+      @click="reload"
+    />
     <p v-if="!loaded" class="text-sm text-muted">
       Loading the logbook.
     </p>
-    <p v-else-if="!defined && !problem" class="text-sm">
-      No logbook yet. Publish collections.yaml to add one.
-    </p>
+    <template v-else-if="!defined && !problem">
+      <p class="text-sm">
+        No logbook yet. Publish collections.yaml to add one.
+      </p>
+      <UButton
+        label="Check again"
+        color="neutral"
+        variant="outline"
+        class="self-start"
+        @click="reload"
+      />
+    </template>
     <template v-else-if="defined">
       <p class="text-sm text-muted">
         What people have written down about this robot, newest first. The latest 50 show here.
@@ -82,7 +99,7 @@ const when = (entry: CollectionRecord) => new Date(entry.created_at).toLocaleStr
           />
         </div>
       </UForm>
-      <p v-if="entries.length === 0" class="text-sm">
+      <p v-if="listed && entries.length === 0" class="text-sm">
         Nothing written yet.
       </p>
       <UCard v-for="entry in entries" :key="entry.id">
