@@ -62,8 +62,8 @@ onMounted(reload)
           No robots yet.
         </p>
         <p>
-          Your role grants nothing on any robot of this app. In the Fleetless Console, attach a robot to the app and tick
-          something for your role on the Roles tab; this list follows at the next reload.
+          Your role reaches nothing on any robot of this app. In the Fleetless Console, attach a robot to the app and
+          check what your role reaches with View as role on the app's Access page; this list follows at the next reload.
         </p>
       </div>
       <UTable

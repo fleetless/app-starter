@@ -5,7 +5,7 @@ import { exposuresOf, grantsDatapoint, tabsFor } from '~/utils/datasheet'
 const exposure = (slug: string, kind: McpRobotDatasheet['exposures'][number]['kind']) =>
   ({ slug, kind, description: null, unit: null, decimals: null, input_schema: null })
 
-const sheet = (exposures: McpRobotDatasheet['exposures'], capabilities = { action_history: false, assets: false }): McpRobotDatasheet =>
+const sheet = (exposures: McpRobotDatasheet['exposures'], capabilities = { job_history: false, assets: false }): McpRobotDatasheet =>
   ({ robot_id: 'r', robot_name: 'rx1', capabilities, exposures })
 
 describe('tabsFor', () => {
@@ -18,7 +18,7 @@ describe('tabsFor', () => {
   })
 
   it('adds Activity, Assets and 3D for the capabilities, without a count', () => {
-    const tabs = tabsFor(sheet([], { action_history: true, assets: true }))
+    const tabs = tabsFor(sheet([], { job_history: true, assets: true }))
     expect(tabs).toEqual([
       { key: 'activity', label: 'Activity', count: null },
       { key: 'assets', label: 'Assets', count: null },
@@ -27,8 +27,13 @@ describe('tabsFor', () => {
   })
 
   it('offers no 3D tab without the assets capability', () => {
-    const tabs = tabsFor(sheet([], { action_history: true, assets: false }))
+    const tabs = tabsFor(sheet([], { job_history: true, assets: false }))
     expect(tabs.map(t => t.key)).toEqual(['activity'])
+  })
+
+  it('offers no Activity tab without the job_history capability', () => {
+    const tabs = tabsFor(sheet([], { job_history: false, assets: true }))
+    expect(tabs.map(t => t.key)).toEqual(['assets', 'model'])
   })
 
   it('answers no tabs for a sheet that grants nothing', () => {

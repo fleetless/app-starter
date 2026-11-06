@@ -31,7 +31,7 @@ export function tabsFor(sheet: McpRobotDatasheet): TabSpec[] {
     const count = exposuresOf(sheet, tab.kind).length
     if (count > 0) tabs.push({ key: tab.key, label: tab.label, count })
   }
-  if (sheet.capabilities.action_history) tabs.push({ key: 'activity', label: 'Activity', count: null })
+  if (sheet.capabilities.job_history) tabs.push({ key: 'activity', label: 'Activity', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'assets', label: 'Assets', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'model', label: '3D', count: null })
   return tabs

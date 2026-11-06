@@ -8,12 +8,12 @@ every screen an app user can reach, already built. Sign-in, registration,
 verification, invitations, password reset, single sign-on, the MCP consent
 screen; the robots the signed-in person reaches; and on each robot every
 datapoint, action, service, publisher, camera, run history and asset their
-role grants. Fleetless has no end-user UI of its own. This is yours.
+role reaches. Fleetless has no end-user UI of its own. This is yours.
 
-What a screen shows is decided by the person's **role** in the [Fleetless
-Console](https://console.fleetless.dev), re-read on every call. A role that
-grants nothing sees a polite empty page; a role that grants everything sees
-it all. The app does not decide, it draws.
+What a screen shows is decided by the person's **role**, an organization role
+set up in the [Fleetless Console](https://console.fleetless.dev) and re-read on
+every call. A role that reaches nothing sees a polite empty page; a role that
+reaches everything sees it all. The app does not decide, it draws.
 
 ## 🚀 Run it
 
@@ -64,12 +64,18 @@ you can tell a missing setting from a broken app.
    | `invite_url` | `http://localhost:3000/auth/invite/{token}` |
    | `mcp_login_url` | `http://localhost:3000/mcp/{interaction}` (with `mcp_enabled` on) |
 
-3. **Settings page.** `default_role_id`: the role a self-registered account
-   gets. (Without it: registration answers `target_state_conflict`.)
-4. **Roles page.** Tick datapoints, actions, services, publishers and cameras
-   for the role, and the `action_history` and `assets` capabilities if the
-   Activity and Assets tabs should exist. A new role grants nothing.
-   (Without it: sign-in works and the robot list is empty.)
+3. **Access page.** `default_role`: the role a self-registered account gets,
+   and the one an invitation carries when it names none. (Without it:
+   registration answers `target_state_conflict`.)
+4. **Roles page.** An organization starts with the roles `observe`, `operate`
+   and `admin`; `operate` is the one for the first user unless you made your
+   own. Nothing is ticked per role and app: what a role reaches lives in each
+   robot's `fleetless.yaml` and in the organization's defaults per kind,
+   explained in
+   [Roles and Rights](https://docs.fleetless.dev/concepts/roles-and-rights/).
+   **View as role** on the app's Access page shows what the role reaches,
+   robot by robot. (Without it: sign-in works, and a role that reaches nothing
+   sees an empty robot list.)
 5. **Attach a robot** to the app on its page, and **create or invite an app
    user** on the Users page. That user signs in here with a password or an
    emailed code, whichever the app's **Sign-in** page turns on (password by
