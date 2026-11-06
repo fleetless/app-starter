@@ -44,6 +44,8 @@ export function useLogbook(robotId: string) {
   }
 
   async function load() {
+    // Whatever started this read, the fallback for a confirmation that has not come is no longer needed.
+    stopWaitingForReady()
     const mine = ++generation
     waiting = []
     problem.value = null
@@ -115,10 +117,27 @@ export function useLogbook(robotId: string) {
   let unsubscribe: () => void = () => {}
   let live = false
 
+  // The cloud confirms a subscription within a moment. When it does not (a network that blocks the WebSocket, a
+  // channel that cannot open: the SDK retries without raising an error) the tab would say that it loads for ever,
+  // although the list is one request away. So it reads once after a few seconds, without the confirmation; if the
+  // confirmation comes later, `onReady` still reads again, as it does after every reconnect.
+  const READY_WAIT_MS = 5_000
+  let readyWait: ReturnType<typeof setTimeout> | undefined
+
+  function stopWaitingForReady() {
+    clearTimeout(readyWait)
+    readyWait = undefined
+  }
+
   function connect() {
     // Harmless when the SDK has already ended it.
     unsubscribe()
     live = true
+    stopWaitingForReady()
+    readyWait = setTimeout(() => {
+      readyWait = undefined
+      if (live && !loaded.value) void load()
+    }, READY_WAIT_MS)
     unsubscribe = client.collections.subscribe(COLLECTION, {
       robot: robotId,
       onError(error) {
@@ -183,9 +202,12 @@ export function useLogbook(robotId: string) {
   }
 
   // The scope, not the component: a tab unmounted inside a v-if still lets go.
-  onScopeDispose(() => unsubscribe())
+  onScopeDispose(() => {
+    stopWaitingForReady()
+    unsubscribe()
+  })
   // Nothing is read here: the list is read when the cloud confirms the subscription, which is also
-  // when the first paint stops saying that it loads.
+  // when the first paint stops saying that it loads (or, failing that, after a few seconds).
   connect()
 
   return { entries, canCreate, defined, categories, loaded, listed, failed, problem, add, reload }

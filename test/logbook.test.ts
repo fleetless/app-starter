@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
 import type { CollectionDefinition, CollectionEvent, CollectionRecord, CollectionSubscribeOptions } from '@fleetless/sdk'
@@ -518,6 +518,129 @@ describe('RobotLogbook', () => {
       expect(page.text()).toContain('Door sensor dirty')
       // A role that cannot read would be refused again, and again.
       expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('when the cloud does not confirm the subscription', () => {
+    // Only the timers the composable sets are faked: the mount and `flushPromises` run on real ones.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const find = (page: Awaited<ReturnType<typeof mountLogbook>>, label: string) =>
+      page.findAll('button').find(b => b.text() === label)
+    const wait = async (ms: number) => {
+      await vi.advanceTimersByTimeAsync(ms)
+      await flushPromises()
+    }
+
+    it('reads once after a few seconds instead of saying that it loads for ever, and reads again when the confirmation does come', async () => {
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      const page = await mountLogbook(undefined, { ready: false })
+
+      await wait(4_000)
+      expect(fake.list).not.toHaveBeenCalled()
+      expect(page.text()).toContain('Loading the logbook.')
+
+      await wait(2_000)
+      expect(fake.definitions).toHaveBeenCalledTimes(1)
+      expect(fake.list).toHaveBeenCalledTimes(1)
+      expect(page.text()).not.toContain('Loading the logbook.')
+      expect(page.text()).toContain('Charged')
+      // One read, not one every few seconds.
+      await wait(30_000)
+      expect(fake.list).toHaveBeenCalledTimes(1)
+
+      // The channel opened after all: the one moment a read is known to have missed nothing.
+      fake.list.mockResolvedValue({ records: [entry('b', 'Door sensor dirty', 9), entry('a', 'Charged', 1)], nextCursor: null })
+      await confirm()
+      expect(fake.list).toHaveBeenCalledTimes(2)
+      expect(page.text()).toContain('Door sensor dirty')
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps what arrived before the read in the list the read returns, and what arrives while it is on its way', async () => {
+      const list = deferred<{ records: CollectionRecord[], nextCursor: string | null }>()
+      fake.list.mockReturnValue(list.promise)
+      const page = await mountLogbook(undefined, { ready: false })
+
+      await wait(6_000)
+      await send({ event: 'created', id: 'c', record: entry('c', 'Brush replaced', 11) })
+      list.resolve({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await flushPromises()
+
+      expect(page.text()).toContain('Charged')
+      expect(page.text()).toContain('Brush replaced')
+    })
+
+    it('does not read a second time when the confirmation came first', async () => {
+      await mountLogbook()
+      expect(fake.list).toHaveBeenCalledTimes(1)
+
+      await wait(30_000)
+      expect(fake.list).toHaveBeenCalledTimes(1)
+      expect(fake.definitions).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not read when the subscription was refused meanwhile: the sentence and Try again stand', async () => {
+      const context = sheetContext()
+      vi.mocked(context.onError).mockResolvedValue('This robot is not part of the app.')
+      const page = await mountLogbook(context, { ready: false })
+
+      fake.options?.onError?.(refusal('robot_not_attached', undefined, 400))
+      await flushPromises()
+      await wait(30_000)
+
+      expect(fake.definitions).not.toHaveBeenCalled()
+      expect(page.text()).toContain('This robot is not part of the app.')
+      expect(find(page, 'Try again')).toBeDefined()
+    })
+
+    it('does not read when the tab is gone', async () => {
+      const page = await mountLogbook(undefined, { ready: false })
+
+      page.unmount()
+      await wait(30_000)
+
+      expect(fake.definitions).not.toHaveBeenCalled()
+      expect(fake.list).not.toHaveBeenCalled()
+    })
+
+    it('a read that fails without the confirmation offers Try again, which reads once more', async () => {
+      fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
+      const page = await mountLogbook(undefined, { ready: false })
+
+      await wait(6_000)
+      expect(page.text()).not.toContain('Loading the logbook.')
+      expect(page.text()).not.toContain('Nothing written yet.')
+      expect(find(page, 'Try again')).toBeDefined()
+
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+      expect(page.text()).toContain('Charged')
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+
+    it('Try again after a refusal waits for the confirmation again, and falls back to one read the same way', async () => {
+      const context = sheetContext()
+      const page = await mountLogbook(context, { ready: false })
+      fake.options?.onError?.(refusal('robot_not_attached', undefined, 400))
+      await flushPromises()
+      expect(fake.list).not.toHaveBeenCalled()
+
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(page.text()).toContain('Loading the logbook.')
+
+      await wait(6_000)
+      expect(fake.list).toHaveBeenCalledTimes(1)
+      expect(page.text()).toContain('Charged')
     })
   })
 

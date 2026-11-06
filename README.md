@@ -94,7 +94,10 @@ app. The starter ships one collection, a `logbook` that belongs to robots, and
 the **Logbook** tab on the robot page reads it, follows it live, reads it again
 when a lost connection comes back and adds entries to it. It reads the list once
 the cloud has confirmed the live subscription (the SDK's `onReady`), so no entry
-written meanwhile falls between the list and the changes that follow. The tab sits after the others on every robot where the role
+written meanwhile falls between the list and the changes that follow. If the
+confirmation does not come within a few seconds (a network that blocks the
+WebSocket, say), it reads the list once anyway, and again when the
+confirmation arrives. The tab sits after the others on every robot where the role
 shows something, and on its own on a robot where the role may read the logbook
 and nothing else. Until a schema is published it says
 `No logbook yet. Publish collections.yaml to add one.`, and **Check again**

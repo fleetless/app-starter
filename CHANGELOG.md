@@ -18,7 +18,9 @@ copy has to change.
   as the role's `access` in the file allows. It reads the list when the cloud
   has confirmed the live subscription (the SDK's `onReady`), the first time and
   after every reconnect, so no entry falls between the list and the changes
-  that follow. The README's "Data: collections" explains how to publish it.
+  that follow; when the confirmation has not come after a few seconds it reads
+  the list once anyway, and again when the confirmation arrives. The README's
+  "Data: collections" explains how to publish it.
 - Sentences for the refusals of a record write: `required_missing`,
   `record_changed`, and `plan_limit` when it is the collection data that is
   full.
