@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-11-06
+
 ### Changed
 
 - `AGENT-SETUP.md` and the README use organization roles. The prompt no longer
