@@ -13,7 +13,7 @@ const fake = vi.hoisted(() => ({
 }))
 mockNuxtImport('useFleetless', () => () => ({ robots: { describe: fake.describe }, collections: { definitions: fake.definitions } }))
 
-const nothing: McpRobotDatasheet = { robot_id: ROBOT, robot_name: 'rx1', capabilities: { action_history: false, assets: false }, exposures: [] }
+const nothing: McpRobotDatasheet = { robot_id: ROBOT, robot_name: 'rx1', capabilities: { job_history: false, assets: false }, exposures: [] }
 const logbook = { key: 'logbook', label: 'Logbook' }
 
 let sheetPage: ReturnType<typeof useDatasheet>
