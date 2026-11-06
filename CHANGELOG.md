@@ -9,6 +9,8 @@ copy has to change.
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-11-06
+
 ### Added
 
 - `collections.yaml`, the schema of the app's own data, with one collection: a
