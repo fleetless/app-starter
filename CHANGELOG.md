@@ -25,6 +25,11 @@ copy has to change.
   `record_changed`, and `plan_limit` when it is the collection data that is
   full.
 
+### Changed
+
+- The SDK dependency is pinned to 5.1.0, the release with `client.collections`
+  that the Logbook tab reads and writes through.
+
 ## [1.5.0] — 2026-11-06
 
 ### Changed
