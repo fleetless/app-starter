@@ -9,6 +9,27 @@ copy has to change.
 
 ## [Unreleased]
 
+### Added
+
+- `collections.yaml`, the schema of the app's own data, with one collection: a
+  logbook per robot. A Logbook tab on the robot page lists the entries newest
+  first, follows them live, reads the list again when a lost connection comes
+  back (entries written meanwhile are not replayed) and adds new ones, as far
+  as the role's `access` in the file allows. It reads the list when the cloud
+  has confirmed the live subscription (the SDK's `onReady`), the first time and
+  after every reconnect, so no entry falls between the list and the changes
+  that follow; when the confirmation has not come after a few seconds it reads
+  the list once anyway, and again when the confirmation arrives. The README's
+  "Data: collections" explains how to publish it.
+- Sentences for the refusals of a record write: `required_missing`,
+  `record_changed`, and `plan_limit` when it is the collection data that is
+  full.
+
+### Changed
+
+- The SDK dependency is pinned to 5.1.0, the release with `client.collections`
+  that the Logbook tab reads and writes through.
+
 ## [1.5.0] — 2026-11-06
 
 ### Changed

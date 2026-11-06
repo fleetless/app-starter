@@ -48,6 +48,22 @@ describe('sentenceFor', () => {
     expect(sentenceFor(error)).toBe('This app has no room for another user on its plan.')
   })
 
+  it('says the plan is full for collection data, not for users', () => {
+    for (const limit of ['collection_records', 'collection_bytes']) {
+      const error = new FleetlessError('plan_limit', 'full', { status: 409, details: { limit, used: 25000, max: 25000, plan: 'basic', lifted_by: { plan: 'plus', addon: null } } })
+      expect(sentenceFor(error), limit).toBe('This app has no room for more data on its plan.')
+    }
+  })
+
+  it('names the required fields of a refused write, and does without them', () => {
+    expect(sentenceFor(new FleetlessError('required_missing', 'x', { status: 400, details: { fields: ['text', 'category'] } }))).toBe('A required value is missing: text, category.')
+    expect(sentenceFor(new FleetlessError('required_missing', 'x', { status: 400 }))).toBe('A required value is missing.')
+  })
+
+  it('says a record changed under the writer, without guessing who', () => {
+    expect(sentenceFor(new FleetlessError('record_changed', 'x', { status: 409, details: { revision: 8 } }))).toBe('This record changed since you read it.')
+  })
+
   it('says a live-only datapoint is not recorded, rather than empty', () => {
     expect(sentenceFor(new FleetlessError('not_recorded', 'live only'))).toBe('Nothing is recorded for this datapoint.')
   })

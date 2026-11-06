@@ -1,0 +1,31 @@
+# The data this app keeps in Fleetless: its collections, as a schema.
+# One document per app. Publish it from the console, or with an assistant (see
+# "Data: collections" in the README); the Logbook tab on the robot page then
+# reads and writes the one collection below.
+format: 1
+collections:
+  logbook:
+    label: Logbook
+    # One entry belongs to one robot, and only people who reach that robot see it.
+    binding: per_robot
+    display: "{{created_at}}"
+    # Role keys of the organisation. A right not listed here goes to no role,
+    # and a key the organisation does not have grants nothing.
+    access:
+      read: [observe, operate, admin]
+      create: [operate, admin]
+      update:
+        all: admin
+        own: operate
+      delete: admin
+    fields:
+      text:
+        type: long_text
+        required: true
+        searchable: true
+      category:
+        type: select
+        options:
+          - value: note
+          - value: fault
+          - value: maintenance
