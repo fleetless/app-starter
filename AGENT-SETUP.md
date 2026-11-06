@@ -4,7 +4,8 @@ The five console steps in the README can also be handled by an agent. Paste
 the prompt into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
-agent asks you seven things once and does the rest.
+agent asks you seven things once, an eighth only if there is no role `operate`,
+and does the rest.
 
 It needs from you: an app name and identifier, the origin the starter runs on
 (`http://localhost:3000` until you deploy it), which robots to attach, the
