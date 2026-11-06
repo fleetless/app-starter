@@ -42,7 +42,7 @@ export function tabsFor(sheet: McpRobotDatasheet, logbook = false): TabSpec[] {
     const count = exposuresOf(sheet, tab.kind).length
     if (count > 0) tabs.push({ key: tab.key, label: tab.label, count })
   }
-  if (sheet.capabilities.action_history) tabs.push({ key: 'activity', label: 'Activity', count: null })
+  if (sheet.capabilities.job_history) tabs.push({ key: 'activity', label: 'Activity', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'assets', label: 'Assets', count: null })
   if (sheet.capabilities.assets) tabs.push({ key: 'model', label: '3D', count: null })
   if (tabs.length > 0 || logbook) tabs.push({ key: 'logbook', label: 'Logbook', count: null })

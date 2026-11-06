@@ -19,6 +19,24 @@ copy has to change.
   `record_changed`, and `plan_limit` when it is the collection data that is
   full.
 
+## [1.5.0] — 2026-11-06
+
+### Changed
+
+- `AGENT-SETUP.md` and the README use organization roles. The prompt no longer
+  creates an Operator role with per-robot grants: it reads the organization's
+  roles, uses `operate`, sets it as the app's `default_role` with `set_access`,
+  invites the first user with that role, and reports what the role reaches on
+  every attached robot with `effective_rights`. The README's Settings and
+  Roles steps become the Access and Roles steps: the default role is on the
+  app's Access page, and rights live in each robot's `fleetless.yaml` and the
+  organization's defaults. Needs a Fleetless cloud with organization roles.
+- The SDK dependency is pinned to 5.0.0. Its datasheet names the
+  run-history capability `job_history`, so the robot page's Activity tab reads
+  `sheet.capabilities.job_history` (`app/utils/datasheet.ts`) instead of
+  `action_history`; port that line if you changed the tabs. A robot list that
+  is empty for your role now points to View as role on the app's Access page.
+
 ## [1.4.0] — 2026-11-04
 
 ### Added

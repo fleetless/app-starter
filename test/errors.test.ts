@@ -16,8 +16,8 @@ describe('sentenceFor', () => {
   })
 
   it('names the console setting a target_state_conflict is about', () => {
-    const error = new FleetlessError('target_state_conflict', 'unset', { status: 409, details: { fields: [{ field: 'default_role_id', rule: 'not_set', message: 'x' }] } })
-    expect(sentenceFor(error)).toBe('The app is not set up for this yet: default_role_id is missing in the console.')
+    const error = new FleetlessError('target_state_conflict', 'unset', { status: 409, details: { fields: [{ field: 'default_role', rule: 'not_set', message: 'x' }] } })
+    expect(sentenceFor(error)).toBe('The app is not set up for this yet: default_role is missing in the console.')
   })
 
   it('answers every OIDC callback code with a sentence, never a bare code', () => {
@@ -126,7 +126,7 @@ describe('two-factor and code refusals', () => {
     const conflict = (rule: string) => err('target_state_conflict', { fields: [{ field: 'two_factor', rule, message: 'm' }] })
     expect(twoFactorConflict(conflict('required'))).toBe('required')
     expect(twoFactorConflict(conflict('off'))).toBe('off')
-    expect(twoFactorConflict(err('target_state_conflict', { fields: [{ field: 'default_role_id', rule: 'missing' }] }))).toBeNull()
+    expect(twoFactorConflict(err('target_state_conflict', { fields: [{ field: 'default_role', rule: 'missing' }] }))).toBeNull()
     expect(sentenceFor(conflict('required'))).toBe('This app requires two-factor; it cannot be switched off.')
   })
 
