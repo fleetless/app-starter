@@ -45,7 +45,7 @@ export function useDatasheet(robotId: string) {
    */
   async function readsLogbook(): Promise<boolean> {
     try {
-      return (await client.collections.definitions()).some(d => d.key === LOGBOOK_COLLECTION)
+      return (await client.collections.definitions()).collections.some(d => d.key === LOGBOOK_COLLECTION)
     } catch {
       return false
     }

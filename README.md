@@ -91,8 +91,8 @@ A robot is not the only thing an app keeps track of. [`collections.yaml`](collec
 is the schema of the app's own data: collections of records, their fields,
 and the roles that may read and write them. There is one such document per
 app. The starter ships one collection, a `logbook` that belongs to robots, and
-the **Logbook** tab on the robot page reads it, follows it live and adds
-entries to it. The tab sits after the others on every robot where the role
+the **Logbook** tab on the robot page reads it, follows it live, reads it again
+when a lost connection comes back and adds entries to it. The tab sits after the others on every robot where the role
 shows something, and on its own on a robot where the role may read the logbook
 and nothing else. Until a schema is published it says
 `No logbook yet. Publish collections.yaml to add one.`, and **Check again**

@@ -13,8 +13,10 @@ copy has to change.
 
 - `collections.yaml`, the schema of the app's own data, with one collection: a
   logbook per robot. A Logbook tab on the robot page lists the entries newest
-  first, follows them live and adds new ones, as far as the role's `access` in
-  the file allows. The README's "Data: collections" explains how to publish it.
+  first, follows them live, reads the list again when a lost connection comes
+  back (entries written meanwhile are not replayed) and adds new ones, as far
+  as the role's `access` in the file allows. The README's "Data: collections"
+  explains how to publish it.
 - Sentences for the refusals of a record write: `required_missing`,
   `record_changed`, and `plan_limit` when it is the collection data that is
   full.

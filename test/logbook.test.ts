@@ -57,6 +57,9 @@ const definition = (create = true): CollectionDefinition => ({
   can: { read: true, create, update: false, delete: false }
 })
 
+/** What `definitions()` resolves: the version in force and the collections the role may read. */
+const schema = (collections: CollectionDefinition[]) => ({ version: 1, collections })
+
 const sheetContext = (): RobotSheetContext => ({
   sheet: ref(null),
   reload: async () => {},
@@ -91,7 +94,7 @@ beforeEach(() => {
   for (const fn of [fake.definitions, fake.list, fake.create, fake.subscribe, fake.unsubscribe]) fn.mockReset()
   fake.options = null
   fake.emit = null
-  fake.definitions.mockResolvedValue([definition()])
+  fake.definitions.mockResolvedValue(schema([definition()]))
   fake.list.mockResolvedValue({ records: [], nextCursor: null })
   fake.subscribe.mockImplementation((_collection: string, options: CollectionSubscribeOptions, onEvent: (event: CollectionEvent) => void) => {
     fake.options = options
@@ -186,7 +189,7 @@ describe('RobotLogbook', () => {
   })
 
   it('an absent collection shows the empty state and no form', async () => {
-    fake.definitions.mockResolvedValue([])
+    fake.definitions.mockResolvedValue(schema([]))
     const page = await mountLogbook()
 
     expect(page.text()).toContain('No logbook yet. Publish collections.yaml to add one.')
@@ -196,7 +199,7 @@ describe('RobotLogbook', () => {
   })
 
   it('a refused subscription to a missing collection adds no sentence to the empty state', async () => {
-    fake.definitions.mockResolvedValue([])
+    fake.definitions.mockResolvedValue(schema([]))
     const context = sheetContext()
     const page = await mountLogbook(context)
 
@@ -209,7 +212,7 @@ describe('RobotLogbook', () => {
   })
 
   it('canCreate false hides the form', async () => {
-    fake.definitions.mockResolvedValue([definition(false)])
+    fake.definitions.mockResolvedValue(schema([definition(false)]))
     fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
     const page = await mountLogbook()
 
@@ -231,7 +234,7 @@ describe('RobotLogbook', () => {
     expect(page.find('textarea').exists()).toBe(true)
 
     // The role lost `create` in the new version.
-    fake.definitions.mockResolvedValue([definition(false)])
+    fake.definitions.mockResolvedValue(schema([definition(false)]))
     fake.options?.onSchemaPublished?.(2)
     await flushPromises()
 
@@ -239,6 +242,52 @@ describe('RobotLogbook', () => {
     expect(fake.list).toHaveBeenCalledTimes(2)
     expect(page.find('textarea').exists()).toBe(false)
     expect(page.text()).toContain('Charged')
+  })
+
+  describe('when the connection came back', () => {
+    it('reads the schema and the list again, so what was written in the meantime shows', async () => {
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      const page = await mountLogbook()
+      expect(page.text()).not.toContain('Door sensor dirty')
+
+      // The SDK subscribed again on the new connection; nothing was replayed from the gap.
+      fake.list.mockResolvedValue({ records: [entry('b', 'Door sensor dirty', 9), entry('a', 'Charged', 1)], nextCursor: null })
+      fake.options?.onResync?.()
+      await flushPromises()
+
+      expect(fake.definitions).toHaveBeenCalledTimes(2)
+      expect(fake.list).toHaveBeenCalledTimes(2)
+      expect(page.text()).toContain('Door sensor dirty')
+      expect(page.text()).toContain('Charged')
+      // The subscription is the SDK's to renew; the tab does not open a second one.
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps what arrives while the list is on its way, as after a publish', async () => {
+      const page = await mountLogbook()
+      const again = deferred<{ records: CollectionRecord[], nextCursor: string | null }>()
+      fake.list.mockReturnValue(again.promise)
+
+      fake.options?.onResync?.()
+      await flushPromises()
+      await send({ event: 'created', id: 'c', record: entry('c', 'Brush replaced', 11) })
+      again.resolve({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await flushPromises()
+
+      expect(page.text()).toContain('Charged')
+      expect(page.text()).toContain('Brush replaced')
+    })
+
+    it('a failed read on the way back offers Try again instead of calling the logbook empty', async () => {
+      const page = await mountLogbook()
+      fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
+
+      fake.options?.onResync?.()
+      await flushPromises()
+
+      expect(page.text()).not.toContain('Nothing written yet.')
+      expect(page.findAll('button').some(b => b.text() === 'Try again')).toBe(true)
+    })
   })
 
   describe('when a read does not go through', () => {
@@ -294,7 +343,7 @@ describe('RobotLogbook', () => {
     })
 
     it('after a publish the empty state can be left: Check again reads and subscribes again', async () => {
-      fake.definitions.mockResolvedValue([])
+      fake.definitions.mockResolvedValue(schema([]))
       const page = await mountLogbook()
       // Before the first publish the cloud refuses the subscription, and the SDK lets it go.
       fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
@@ -303,7 +352,7 @@ describe('RobotLogbook', () => {
       expect(fake.subscribe).toHaveBeenCalledTimes(1)
 
       // The developer publishes collections.yaml and comes back to the tab.
-      fake.definitions.mockResolvedValue([definition()])
+      fake.definitions.mockResolvedValue(schema([definition()]))
       fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
       await find(page, 'Check again')!.trigger('click')
       await flushPromises()
@@ -320,7 +369,7 @@ describe('RobotLogbook', () => {
     })
 
     it('Check again on an app that still has no logbook stays on the empty state', async () => {
-      fake.definitions.mockResolvedValue([])
+      fake.definitions.mockResolvedValue(schema([]))
       const page = await mountLogbook()
 
       await find(page, 'Check again')!.trigger('click')
@@ -347,6 +396,31 @@ describe('RobotLogbook', () => {
       expect(fake.subscribe).toHaveBeenCalledTimes(2)
     })
 
+    it('an internal_error that ends the subscription offers Try again, which subscribes again and reads', async () => {
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      const page = await mountLogbook()
+      expect(find(page, 'Try again')).toBeUndefined()
+
+      // The cloud could not check on the subscription, and the SDK let it go: nothing more arrives.
+      fake.options?.onError?.(refusal('internal_error', undefined, 500))
+      await flushPromises()
+      expect(page.text()).toContain('The request was refused (internal_error).')
+      expect(page.text()).toContain('Charged')
+      expect(find(page, 'Try again')).toBeDefined()
+
+      fake.list.mockResolvedValue({ records: [entry('b', 'Door sensor dirty', 9), entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.subscribe.mock.invocationCallOrder[1]).toBeLessThan(fake.list.mock.invocationCallOrder[1]!)
+      expect(page.text()).toContain('Door sensor dirty')
+      expect(page.text()).not.toContain('internal_error')
+      expect(find(page, 'Try again')).toBeUndefined()
+      await send({ event: 'created', id: 'c', record: entry('c', 'Brush replaced', 11) })
+      expect(page.text()).toContain('Brush replaced')
+    })
+
     it('after forbidden the tab reads what the role may do now, without subscribing again', async () => {
       fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
       const context = sheetContext()
@@ -354,7 +428,7 @@ describe('RobotLogbook', () => {
       expect(page.find('textarea').exists()).toBe(true)
 
       // The role lost `create` and the cloud ended the subscription.
-      fake.definitions.mockResolvedValue([definition(false)])
+      fake.definitions.mockResolvedValue(schema([definition(false)]))
       fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1), entry('b', 'Door sensor dirty', 9)], nextCursor: null })
       fake.options?.onError?.(refusal('forbidden', undefined, 403))
       await flushPromises()

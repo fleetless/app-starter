@@ -32,7 +32,7 @@ beforeEach(() => {
 
 describe('the robot page\'s sheet', () => {
   it('knows whether the role may read the logbook, which the sheet does not say', async () => {
-    fake.definitions.mockResolvedValue([{ key: 'other', label: 'Other' }, logbook])
+    fake.definitions.mockResolvedValue({ version: 1, collections: [{ key: 'other', label: 'Other' }, logbook] })
     await mountSuspended(Harness)
     await sheetPage.reload()
 
@@ -42,7 +42,7 @@ describe('the robot page\'s sheet', () => {
   })
 
   it('has no Logbook where the role may read no logbook collection', async () => {
-    fake.definitions.mockResolvedValue([{ key: 'other', label: 'Other' }])
+    fake.definitions.mockResolvedValue({ version: 1, collections: [{ key: 'other', label: 'Other' }] })
     await mountSuspended(Harness)
     await sheetPage.reload()
 
@@ -61,7 +61,7 @@ describe('the robot page\'s sheet', () => {
   })
 
   it('reads the sheet and the schema together, and a failed sheet is still the page\'s failure', async () => {
-    fake.definitions.mockResolvedValue([logbook])
+    fake.definitions.mockResolvedValue({ version: 1, collections: [logbook] })
     fake.describe.mockRejectedValue(refusal('internal_error', undefined, 500))
     await mountSuspended(Harness)
     await sheetPage.reload()

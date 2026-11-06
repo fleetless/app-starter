@@ -49,7 +49,7 @@ export function useLogbook(robotId: string) {
     problem.value = null
     failed.value = false
     try {
-      const found = (await client.collections.definitions()).find(d => d.key === COLLECTION)
+      const found = (await client.collections.definitions()).collections.find(d => d.key === COLLECTION)
       // A newer load (a publish, say) has taken over: it drains `waiting`.
       if (mine !== generation) return
       read(found)
@@ -111,7 +111,7 @@ export function useLogbook(robotId: string) {
 
   // The codes with which the SDK ends a subscription (its `onError` says which): after one of these
   // nothing more arrives, and only a new `subscribe` brings the tab live again.
-  const ENDS = new Set(['collection_not_found', 'collection_removed', 'forbidden', 'robot_not_attached', 'validation_error'])
+  const ENDS = new Set(['collection_not_found', 'collection_removed', 'forbidden', 'robot_not_attached', 'validation_error', 'internal_error'])
   let unsubscribe: () => void = () => {}
   let live = false
 
@@ -130,6 +130,9 @@ export function useLogbook(robotId: string) {
           loaded.value = true
           return
         }
+        // The cloud could not check on the subscription and let it go, and no read failed: the tab says
+        // so and offers the same "Try again", which subscribes again.
+        if (error.code === 'internal_error') failed.value = true
         void report(error).then((sentence) => {
           problem.value = sentence
           // A role change closed the subscription, and with it what the person may read and write may have
@@ -141,7 +144,10 @@ export function useLogbook(robotId: string) {
       // Rights, fields and the data itself may have changed, and a publish sends no record events. Only a
       // running subscription hears of it: before the first publish the cloud refused this one, so the
       // empty state offers `reload` instead.
-      onSchemaPublished: () => void load()
+      onSchemaPublished: () => void load(),
+      // The SDK sent the subscription again on a new connection, and what changed while it was down is
+      // not replayed: read the list again. Events that arrive meanwhile wait, as on the first read.
+      onResync: () => void load()
     }, (event) => {
       if (waiting) waiting.push(event)
       else apply(event)
