@@ -74,13 +74,21 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
-async function mountLogbook(context?: RobotSheetContext) {
+/** The cloud confirming the subscription is what makes the tab read: `ready: false` leaves it waiting for that. */
+async function mountLogbook(context?: RobotSheetContext, { ready = true }: { ready?: boolean } = {}) {
   const wrapper = await mountSuspended(Logbook, {
     props: { robotId: ROBOT },
     global: context ? { provide: { [RobotSheet as symbol]: context } } : {}
   })
   await flushPromises()
+  if (ready) await confirm()
   return wrapper
+}
+
+/** The cloud has registered the subscription and says so (the SDK's `onReady`). */
+const confirm = async () => {
+  fake.options?.onReady?.()
+  await flushPromises()
 }
 
 const send = async (event: CollectionEvent) => {
@@ -104,13 +112,29 @@ beforeEach(() => {
 })
 
 describe('RobotLogbook', () => {
-  it('loads the list newest first after subscribing', async () => {
+  it('reads nothing until the cloud has confirmed the subscription, and says it loads', async () => {
+    const page = await mountLogbook(undefined, { ready: false })
+
+    expect(fake.subscribe).toHaveBeenCalledWith('logbook', expect.objectContaining({ robot: ROBOT }), expect.any(Function))
+    // A list read now could miss a change the cloud has not started to deliver yet.
+    expect(fake.definitions).not.toHaveBeenCalled()
+    expect(fake.list).not.toHaveBeenCalled()
+    expect(page.text()).toContain('Loading the logbook.')
+    expect(page.text()).not.toContain('Nothing written yet.')
+    expect(page.text()).not.toContain('No logbook yet.')
+
+    await confirm()
+
+    expect(fake.list).toHaveBeenCalledTimes(1)
+    expect(page.text()).not.toContain('Loading the logbook.')
+    expect(page.text()).toContain('Nothing written yet.')
+  })
+
+  it('loads the list newest first once the subscription is confirmed', async () => {
     fake.list.mockResolvedValue({ records: [entry('b', 'Belt retensioned', 5, { values: { text: 'Belt retensioned', category: 'maintenance' } }), entry('a', 'Charged', 1)], nextCursor: null })
 
     const page = await mountLogbook()
 
-    // Subscribe first, list second: a change between the two would be lost the other way round.
-    expect(fake.subscribe).toHaveBeenCalledWith('logbook', expect.objectContaining({ robot: ROBOT }), expect.any(Function))
     expect(fake.list).toHaveBeenCalledWith('logbook', { robot: ROBOT, sort: ['-created_at'], limit: 50 })
     expect(fake.subscribe.mock.invocationCallOrder[0]).toBeLessThan(fake.list.mock.invocationCallOrder[0]!)
 
@@ -198,17 +222,19 @@ describe('RobotLogbook', () => {
     expect(fake.list).not.toHaveBeenCalled()
   })
 
-  it('a refused subscription to a missing collection adds no sentence to the empty state', async () => {
-    fake.definitions.mockResolvedValue(schema([]))
+  it('a refused subscription to a missing collection adds no sentence to the empty state and no read', async () => {
     const context = sheetContext()
-    const page = await mountLogbook(context)
+    const page = await mountLogbook(context, { ready: false })
 
+    // The cloud answers the subscribe with an error and never confirms it.
     fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
     await flushPromises()
 
     expect(page.text()).toContain('No logbook yet. Publish collections.yaml to add one.')
+    expect(page.text()).not.toContain('Loading the logbook.')
     expect(page.text()).not.toContain('refused')
     expect(context.onError).not.toHaveBeenCalled()
+    expect(fake.definitions).not.toHaveBeenCalled()
   })
 
   it('canCreate false hides the form', async () => {
@@ -245,15 +271,14 @@ describe('RobotLogbook', () => {
   })
 
   describe('when the connection came back', () => {
-    it('reads the schema and the list again, so what was written in the meantime shows', async () => {
+    it('reads the schema and the list again once the cloud confirms the subscription, so what was written in the meantime shows', async () => {
       fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
       const page = await mountLogbook()
       expect(page.text()).not.toContain('Door sensor dirty')
 
       // The SDK subscribed again on the new connection; nothing was replayed from the gap.
       fake.list.mockResolvedValue({ records: [entry('b', 'Door sensor dirty', 9), entry('a', 'Charged', 1)], nextCursor: null })
-      fake.options?.onResync?.()
-      await flushPromises()
+      await confirm()
 
       expect(fake.definitions).toHaveBeenCalledTimes(2)
       expect(fake.list).toHaveBeenCalledTimes(2)
@@ -268,8 +293,7 @@ describe('RobotLogbook', () => {
       const again = deferred<{ records: CollectionRecord[], nextCursor: string | null }>()
       fake.list.mockReturnValue(again.promise)
 
-      fake.options?.onResync?.()
-      await flushPromises()
+      await confirm()
       await send({ event: 'created', id: 'c', record: entry('c', 'Brush replaced', 11) })
       again.resolve({ records: [entry('a', 'Charged', 1)], nextCursor: null })
       await flushPromises()
@@ -282,8 +306,7 @@ describe('RobotLogbook', () => {
       const page = await mountLogbook()
       fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
 
-      fake.options?.onResync?.()
-      await flushPromises()
+      await confirm()
 
       expect(page.text()).not.toContain('Nothing written yet.')
       expect(page.findAll('button').some(b => b.text() === 'Try again')).toBe(true)
@@ -293,6 +316,50 @@ describe('RobotLogbook', () => {
   describe('when a read does not go through', () => {
     const find = (page: Awaited<ReturnType<typeof mountLogbook>>, label: string) =>
       page.findAll('button').find(b => b.text() === label)
+
+    it('a subscription refused before it was confirmed stops the loading: the sentence and Try again, which subscribes again and reads once confirmed', async () => {
+      const context = sheetContext()
+      vi.mocked(context.onError).mockResolvedValue('This robot is not part of the app.')
+      const page = await mountLogbook(context, { ready: false })
+      expect(page.text()).toContain('Loading the logbook.')
+
+      fake.options?.onError?.(refusal('robot_not_attached', undefined, 400))
+      await flushPromises()
+
+      expect(page.text()).not.toContain('Loading the logbook.')
+      expect(page.text()).toContain('This robot is not part of the app.')
+      expect(find(page, 'Try again')).toBeDefined()
+      expect(fake.list).not.toHaveBeenCalled()
+
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+      // Subscribed again, and the read waits for the cloud to say so.
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.list).not.toHaveBeenCalled()
+      expect(page.text()).toContain('Loading the logbook.')
+      expect(page.text()).not.toContain('This robot is not part of the app.')
+
+      await confirm()
+      expect(page.text()).toContain('Charged')
+      expect(find(page, 'Try again')).toBeUndefined()
+    })
+
+    it('a channel that cannot open before the first confirmation stops the loading too, and Try again reads over REST', async () => {
+      const page = await mountLogbook(sheetContext(), { ready: false })
+
+      fake.options?.onError?.(refusal('no_session', undefined, 401))
+      await flushPromises()
+      expect(page.text()).not.toContain('Loading the logbook.')
+      expect(find(page, 'Try again')).toBeDefined()
+
+      // The subscription is still the SDK's to open when the channel can: only the read is repeated.
+      fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
+      await find(page, 'Try again')!.trigger('click')
+      await flushPromises()
+      expect(fake.subscribe).toHaveBeenCalledTimes(1)
+      expect(page.text()).toContain('Charged')
+    })
 
     it('a failed list read does not claim nothing was written, and Try again reads it again', async () => {
       fake.list.mockRejectedValueOnce(refusal('internal_error', undefined, 500))
@@ -343,8 +410,7 @@ describe('RobotLogbook', () => {
     })
 
     it('after a publish the empty state can be left: Check again reads and subscribes again', async () => {
-      fake.definitions.mockResolvedValue(schema([]))
-      const page = await mountLogbook()
+      const page = await mountLogbook(undefined, { ready: false })
       // Before the first publish the cloud refuses the subscription, and the SDK lets it go.
       fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
       await flushPromises()
@@ -356,26 +422,35 @@ describe('RobotLogbook', () => {
       fake.list.mockResolvedValue({ records: [entry('a', 'Charged', 1)], nextCursor: null })
       await find(page, 'Check again')!.trigger('click')
       await flushPromises()
+      // Subscribed again; the reads wait for the cloud to confirm it, so nothing between them is lost.
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.list).not.toHaveBeenCalled()
+      await confirm()
 
       expect(page.text()).not.toContain('No logbook yet.')
       expect(page.text()).toContain('Charged')
       expect(page.find('textarea').exists()).toBe(true)
-      expect(fake.definitions).toHaveBeenCalledTimes(2)
-      // Subscribed first, so nothing between the two reads is lost, and the new subscription is the live one.
-      expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.definitions).toHaveBeenCalledTimes(1)
+      // The new subscription is the live one.
       expect(fake.subscribe.mock.invocationCallOrder[1]).toBeLessThan(fake.list.mock.invocationCallOrder[0]!)
       await send({ event: 'created', id: 'b', record: entry('b', 'Door sensor dirty', 9) })
       expect(page.text()).toContain('Door sensor dirty')
     })
 
     it('Check again on an app that still has no logbook stays on the empty state', async () => {
-      fake.definitions.mockResolvedValue(schema([]))
-      const page = await mountLogbook()
+      const page = await mountLogbook(undefined, { ready: false })
+      fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
+      await flushPromises()
 
       await find(page, 'Check again')!.trigger('click')
       await flushPromises()
+      // The cloud refuses the new subscription as it did the first.
+      fake.options?.onError?.(refusal('collection_not_found', undefined, 404))
+      await flushPromises()
 
+      expect(fake.subscribe).toHaveBeenCalledTimes(2)
       expect(page.text()).toContain('No logbook yet. Publish collections.yaml to add one.')
+      expect(page.text()).not.toContain('Loading the logbook.')
       expect(find(page, 'Check again')).toBeDefined()
     })
 
@@ -391,6 +466,7 @@ describe('RobotLogbook', () => {
 
       await find(page, 'Check again')!.trigger('click')
       await flushPromises()
+      await confirm()
 
       expect(page.text()).toContain('Charged')
       expect(fake.subscribe).toHaveBeenCalledTimes(2)
@@ -411,8 +487,11 @@ describe('RobotLogbook', () => {
       fake.list.mockResolvedValue({ records: [entry('b', 'Door sensor dirty', 9), entry('a', 'Charged', 1)], nextCursor: null })
       await find(page, 'Try again')!.trigger('click')
       await flushPromises()
-
       expect(fake.subscribe).toHaveBeenCalledTimes(2)
+      expect(fake.list).toHaveBeenCalledTimes(1) // the read waits for the new subscription's confirmation
+      await confirm()
+
+      expect(fake.list).toHaveBeenCalledTimes(2)
       expect(fake.subscribe.mock.invocationCallOrder[1]).toBeLessThan(fake.list.mock.invocationCallOrder[1]!)
       expect(page.text()).toContain('Door sensor dirty')
       expect(page.text()).not.toContain('internal_error')

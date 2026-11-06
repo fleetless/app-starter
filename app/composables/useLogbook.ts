@@ -25,10 +25,10 @@ export function useLogbook(robotId: string) {
   // re-reads the sheet); away from it the sentence stands.
   const context = inject(RobotSheet, null)
 
-  // The cloud sends no first snapshot, so the list is read after subscribing,
-  // and a change can land while it is on its way. Those changes wait here and
-  // are applied on top of the list, which is a snapshot from somewhere in the
-  // middle of the same stream.
+  // The cloud sends no first snapshot, so the list is read once the cloud has
+  // confirmed the subscription (`onReady`), and a change can land while it is
+  // on its way. Those changes wait here and are applied on top of the list,
+  // which is a snapshot from somewhere in the middle of the same stream.
   let waiting: CollectionEvent[] | null = []
   let generation = 0
 
@@ -138,16 +138,27 @@ export function useLogbook(robotId: string) {
           // A role change closed the subscription, and with it what the person may read and write may have
           // changed: read it again so the tab does not go on showing what the role no longer reaches. Not a
           // new subscription: a role that cannot read would be refused again, and again.
-          if (error.code === 'forbidden') void load()
+          if (error.code === 'forbidden') {
+            void load()
+            return
+          }
+          // Refused, or the channel could not open, before the cloud ever confirmed it: `onReady` is not
+          // coming, so the tab stops saying it loads, says what happened and offers "Try again".
+          if (!loaded.value) {
+            failed.value = true
+            loaded.value = true
+          }
         })
       },
       // Rights, fields and the data itself may have changed, and a publish sends no record events. Only a
       // running subscription hears of it: before the first publish the cloud refused this one, so the
       // empty state offers `reload` instead.
       onSchemaPublished: () => void load(),
-      // The SDK sent the subscription again on a new connection, and what changed while it was down is
-      // not replayed: read the list again. Events that arrive meanwhile wait, as on the first read.
-      onResync: () => void load()
+      // The cloud confirmed the subscription: the first time, and again after every reconnect, when what
+      // changed while the connection was down was not replayed. From here on every change arrives as an
+      // event, so this is where the list is read, and the one place it is read for these two reasons.
+      // Events that arrive meanwhile wait, as after a publish.
+      onReady: () => void load()
     }, (event) => {
       if (waiting) waiting.push(event)
       else apply(event)
@@ -155,19 +166,27 @@ export function useLogbook(robotId: string) {
   }
 
   /**
-   * Reads the schema and the list again, and first subscribes again when the cloud ended the
-   * subscription (no collection yet, one removed, a role changed): what comes of the read is then live
-   * as well. For the buttons "Check again" and "Try again".
+   * Reads the schema and the list again. When the cloud ended the subscription (no collection yet, one
+   * removed, a role changed) it subscribes again instead, and the read follows the cloud's confirmation,
+   * so that what comes of it is live as well; until then the tab says it loads. For the buttons "Check
+   * again" and "Try again".
    */
   async function reload() {
-    if (!live) connect()
-    await load()
+    if (live) {
+      await load()
+      return
+    }
+    problem.value = null
+    failed.value = false
+    loaded.value = false
+    connect()
   }
 
   // The scope, not the component: a tab unmounted inside a v-if still lets go.
   onScopeDispose(() => unsubscribe())
+  // Nothing is read here: the list is read when the cloud confirms the subscription, which is also
+  // when the first paint stops saying that it loads.
   connect()
-  void load()
 
   return { entries, canCreate, defined, categories, loaded, listed, failed, problem, add, reload }
 }
