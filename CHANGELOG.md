@@ -9,6 +9,14 @@ copy has to change.
 
 ## [Unreleased]
 
+### Added
+
+- `docker-compose.yaml`: `docker compose up` runs the dev server in a
+  container, with hot reload, on a machine with Docker and no Node.
+  Dependencies and Nuxt's generated files stay in named volumes. `PORT` and
+  `CHOKIDAR_USEPOLLING` in `.env` move the port and turn on polling. The
+  README's "Run it" says how.
+
 ## [1.6.0] — 2026-11-06
 
 ### Added

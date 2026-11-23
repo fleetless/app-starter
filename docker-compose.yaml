@@ -1,0 +1,37 @@
+# The dev server in a container: the host needs Docker and nothing else.
+#
+#   cp .env.example .env    # fill in NUXT_PUBLIC_APP_IDENTIFIER
+#   docker compose up       # http://localhost:3000
+#
+# The checkout is mounted, so an edit on the host reaches the browser as with
+# `pnpm dev`. Dependencies, the pnpm store and Nuxt's generated files stay in
+# named volumes: Linux packages never land in the checkout, and the first
+# start downloads them once. Ctrl-C stops the container; `docker compose
+# down -v` removes it and the volumes.
+#
+# Compose reads `.env` too, for these two:
+#   PORT                 the port on this machine and in the container, 3000
+#                        unless set. The app's origin follows it.
+#   CHOKIDAR_USEPOLLING  true, when an edit does not reach the browser. Docker
+#                        Desktop on Windows, with the checkout on a Windows
+#                        drive, passes no file events into the container.
+
+services:
+  app:
+    image: node:22.23.5-bookworm-slim
+    init: true
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && exec pnpm dev --host 0.0.0.0 --port ${PORT:-3000}"
+    environment:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING:-false}
+    ports:
+      - "127.0.0.1:${PORT:-3000}:${PORT:-3000}"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - nuxt:/app/.nuxt
+
+volumes:
+  node_modules:
+  nuxt:

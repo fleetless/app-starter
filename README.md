@@ -33,6 +33,28 @@ network — means listing that name in `NUXT_DEV_ALLOWED_HOSTS`. Vite refuses
 a host header it was not told about, which is what stops a DNS-rebinding
 attack on your dev server; localhost and plain IP addresses need no entry.
 
+**Or in Docker**, with nothing on this machine but Docker:
+
+```sh
+cp .env.example .env      # fill in NUXT_PUBLIC_APP_IDENTIFIER
+docker compose up         # http://localhost:3000
+```
+
+The first start installs the dependencies into a volume; later starts skip
+that. The checkout is mounted, so an edit here reaches the browser as with
+`pnpm dev`. Compose reads two more lines of `.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PORT` | `3000` | The port on this machine and in the container. The app's origin, and with it `allowed_origins`, follows. |
+| `CHOKIDAR_USEPOLLING` | `false` | `true` when an edit does not reach the browser: Docker Desktop on Windows passes no file events from a checkout on a Windows drive. |
+
+A command inside runs as `docker compose exec app pnpm typecheck`. Ctrl-C
+stops the container; `docker compose down -v` removes it with its volumes.
+On Linux, Docker leaves two empty folders owned by root, `node_modules` and
+`.nuxt`: the mount points. `rmdir node_modules .nuxt` clears them before a
+`pnpm install` on this machine.
+
 ## 🧭 Set it up in the console
 
 **Or let an agent do it.** [`AGENT-SETUP.md`](AGENT-SETUP.md) is a prompt to
@@ -170,6 +192,7 @@ and export are in [App Data](https://docs.fleetless.dev/concepts/app-data/).
 | `app/composables/useLogbook.ts` | One robot's logbook: the list, then every change, and adding an entry. |
 | `app/components/robot/Logbook.vue` | The Logbook tab. |
 | `app/utils/errors.ts` | Every refusal's one sentence. |
+| `docker-compose.yaml` | The dev server in a container, for a machine with Docker and no Node. |
 
 The SDK reference at [docs.fleetless.dev](https://docs.fleetless.dev/reference/sdk/)
 is the reference for everything this app calls; [manage users and
