@@ -35,3 +35,5 @@ jobs:
       # repository").
       - run: node --test '.github/release/*.test.mjs'
       - run: pnpm build
+      # docker-compose.yaml parses, with the defaults a fresh clone has.
+      - run: docker compose config --quiet
