@@ -17,6 +17,17 @@ copy has to change.
   `CHOKIDAR_USEPOLLING` in `.env` move the port and turn on polling. The
   README's "Run it" says how.
 
+### Fixed
+
+- `AGENT-SETUP.md` runs to its report on Basic: the app's MCP server is a
+  question in step 1 (it needs Plus), not a call that is refused
+  `plan_required` and stops the run.
+- `AGENT-SETUP.md` asks for the addresses of the app's legal notice and
+  privacy policy and sets them with `set_urls` before it invites anyone; the
+  cloud lets nobody in without both. Without them it invites nobody and says
+  where to add them in the console. "What you do afterwards" names
+  `docker compose up` beside `pnpm dev`.
+
 ## [1.6.0] — 2026-11-06
 
 ### Added

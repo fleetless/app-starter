@@ -4,15 +4,18 @@ The five console steps in the README can also be handled by an agent. Paste
 the prompt into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
-agent asks you seven things once, an eighth only if there is no role `operate`,
+agent asks you nine things once, a tenth only if there is no role `operate`,
 and does the rest.
 
 It needs from you: an app name and identifier, the origin the starter runs on
 (`http://localhost:3000` until you deploy it), which robots to attach, the
 email address of the first app user, whether that person gets the invitation
-by mail or as a link you pass on, and whether mailed links should open in the
+by mail or as a link you pass on, whether mailed links should open in the
 starter rather than on Fleetless's hosted pages (not until it runs somewhere
-the people you invite can reach).
+the people you invite can reach), whether the app's users may connect AI tools
+to it over MCP (Plus and above), and the addresses of the app's legal notice
+and privacy policy: two public `https://` pages Fleetless checks load before it
+lets anyone in.
 
 It cannot choose a password — the invitation is where the person sets one,
 when the app signs in by password — and it cannot publish a robot that
@@ -36,34 +39,41 @@ You are setting up a Fleetless app for the app-starter template using the Fleetl
    (d) which robots to attach — call console_robots_read with action list first and show me their names;
    (e) the email address of the first app user;
    (f) whether Fleetless should mail the invitation, or hand me the link;
-   (g) whether mailed links and the MCP sign-in should open in this app instead of on Fleetless's hosted pages — default no; yes only once the app runs at an origin the people I invite can reach.
+   (g) whether mailed links and the MCP sign-in should open in this app instead of on Fleetless's hosted pages — default no; yes only once the app runs at an origin the people I invite can reach;
+   (h) whether the app's users may connect AI tools such as Claude to this app over MCP — default no; it needs the Plus plan or above;
+   (i) the addresses of the app's legal notice and privacy policy — two public https:// pages; Fleetless checks that both load and lets nobody into the app before both are set. I may give none yet.
 
 2. Create the app with console_apps_write, action create: name, identifier and the chosen robot_ids. Keep the app id.
 
 3. Read the auth configuration with console_apps_read, action auth_config, to see the current self_registration, allowed_domains and app_url. Then write each slice with console_apps_write, carrying every field that slice takes:
    - action set_registration: self_registration and allowed_domains exactly as read, allowed_origins set to the origin from (c), bare — scheme, host and port, no path, no trailing slash
-   - action set_mcp: mcp_enabled true
-   - only if I said yes in (g), action set_urls: app_url exactly as read, invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}; otherwise leave the URLs unset, and Fleetless's hosted pages answer those links
+   - only if I said yes in (h), action set_mcp: mcp_enabled true
+   - only if I said yes in (g) or gave both addresses in (i), action set_urls with all seven keys: app_url exactly as read; if I said yes in (g), invite_url <origin>/auth/invite/{token}, verify_url <origin>/auth/verify/{token}, reset_url <origin>/auth/reset/{token}, mcp_login_url <origin>/mcp/{interaction}, otherwise those four null, and Fleetless's hosted pages answer those links; operator_info_url and privacy_policy_url the two addresses from (i), or null if I gave none
 
 4. Use the organization role with the key operate. Call console_roles_read with action list. If no role has the key operate, stop and ask me which role key the first user should hold, and use that key wherever the steps below say operate. Under the organization's defaults, operate reaches the datapoints, cameras, assets, services, actions, publishers and job history of every attached robot unless a robot's fleetless.yaml asks for a stricter role, and it holds observe by inheritance.
 
 5. Make that role the app's default: call console_apps_read with action access for the app, then console_apps_write with action set_access, default_role set to that key, and locked_kinds and locked exactly as access returned them.
 
-6. Invite the first user with console_app_users_write, action invite: the email from (e), role set to that key, send_mail true if I chose mail in (f), otherwise false.
+6. If I gave both addresses in (i), invite the first user with console_app_users_write, action invite: the email from (e), role set to that key, send_mail true if I chose mail in (f), otherwise false. If I did not, invite nobody.
 
 7. Report, and nothing else:
    - the line for .env: NUXT_PUBLIC_APP_IDENTIFIER=<identifier>
-   - the invitation: "mailed to <email>", or the accept_url exactly as returned
+   - the invitation: "mailed to <email>", or the accept_url exactly as returned, or, if nobody was invited, that the legal notice and privacy policy go in the Fleetless Console under Apps, <app name>, Sign-in, Links and pages, and that step 6 runs once both are saved
    - whether the mailed links open in this app or on Fleetless's hosted pages
+   - whether the app's MCP server is on
    - for every attached robot, what that role reaches (console_roles_read, action effective_rights, with the app id and the role), and any robot that exposes nothing
    - anything that was refused, with the code and the sentence
 ```
 
 ## What you do afterwards
 
-Put the `.env` line into `.env`, start the app (`pnpm dev`), open the
+Put the `.env` line into `.env`, start the app with `pnpm dev`, or with
+`docker compose up` ([README](README.md#-run-it), "Run it"), open the
 invitation link. It opens Fleetless's hosted page, or the starter's own when
 you said so in (g). Accept it, then sign in here.
+
+A run without the legal links ends at the report and invites nobody: add both
+in the console, then ask the agent to run step 6.
 
 The robot appears; click it. Everything the prompt set is visible and
 editable in the [Fleetless Console](https://console.fleetless.dev), under the
