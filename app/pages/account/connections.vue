@@ -62,6 +62,9 @@ onMounted(load)
                 A client calling itself {{ grant.client_name ?? 'nothing' }}
               </p>
               <p class="text-xs text-muted">
+                <template v-if="grant.client_id_host">
+                  domain <span class="font-mono" data-test="grant-domain">{{ grant.client_id_host }}</span> ·
+                </template>
                 allowed {{ new Date(grant.granted_at).toLocaleString() }} · id <span class="font-mono">{{ grant.client_id }}</span>
               </p>
             </div>
