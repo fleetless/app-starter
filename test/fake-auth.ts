@@ -19,7 +19,11 @@ export function fakeAuth() {
     disableTwoFactor: vi.fn(async () => {}),
     resendVerification: vi.fn(async () => {}),
     beginOidcLogin: vi.fn(),
-    mcpInteraction: vi.fn()
+    mcpInteraction: vi.fn(),
+    approveMcpInteraction: vi.fn(),
+    denyMcpInteraction: vi.fn(),
+    listMcpGrants: vi.fn(async () => []),
+    revokeMcpGrant: vi.fn(async () => {})
   }
 }
 

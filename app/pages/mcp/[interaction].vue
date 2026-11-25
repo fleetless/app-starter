@@ -69,6 +69,19 @@ async function decide(approve: boolean) {
         A client calling itself <strong>{{ interaction.client_name ?? 'nothing at all' }}</strong> wants to act
         as <strong>{{ identity.email }}</strong> in {{ starter.name }}. That name is the client's own claim; nobody checked it.
       </p>
+      <p class="text-sm" data-test="mcp-origin">
+        <template v-if="interaction.client_id_host">
+          Its domain is <strong>{{ interaction.client_id_host }}</strong>, checked by fetching its metadata document.
+        </template>
+        The answer goes to <strong>{{ interaction.redirect_uri_host }}</strong>.
+      </p>
+      <UAlert
+        v-if="interaction.redirect_uri_loopback"
+        color="warning"
+        variant="subtle"
+        data-test="mcp-loopback"
+        :title="`This client receives the answer on this computer (${interaction.redirect_uri_host}). Approve only if you started it here.`"
+      />
       <p class="text-sm text-muted">
         It will be able to do whatever your role allows here, until you disconnect it under Account.
         This request expires {{ new Date(interaction.expires_at).toLocaleTimeString() }}.

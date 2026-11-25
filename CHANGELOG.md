@@ -11,6 +11,14 @@ copy has to change.
 
 ### Added
 
+- **The MCP consent page names where a client comes from and where the answer
+  goes** (fleetless/fleetless#1218). A client may use the HTTPS URL of its
+  Client ID Metadata Document as `client_id`; `/mcp/:interaction` shows the
+  domain that document came from, the host the answer is sent to, and a
+  warning when that host is this computer. **Account › Connections** shows the
+  domain beside the client's name. Port it: both pages read the new
+  `client_id_host`, `redirect_uri_host` and `redirect_uri_loopback` fields.
+
 - `docker-compose.yaml`: `docker compose up` runs the dev server in a
   container, with hot reload, on a machine with Docker and no Node.
   Dependencies and Nuxt's generated files stay in named volumes. `PORT` and
