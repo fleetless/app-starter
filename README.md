@@ -62,7 +62,7 @@ paste into an MCP client connected to `https://mcp.fleetless.dev`; it performs
 every step below and reports the `.env` line and the invitation. The steps
 stay here for the person who wants to see each setting.
 
-Five settings, in this order. Each names the refusal you see without it, so
+Six settings, in this order. Each names the refusal you see without it, so
 you can tell a missing setting from a broken app.
 
 1. **Create an app** on the Apps page. Its identifier goes into `.env` as
@@ -98,7 +98,11 @@ you can tell a missing setting from a broken app.
    **View as role** on the app's Access page shows what the role reaches,
    robot by robot. (Without it: sign-in works, and a role that reaches nothing
    sees an empty robot list.)
-5. **Attach a robot** to the app on its page, and **create or invite an app
+5. **Sign-in page, under Links and pages.** Your **Legal notice** and your
+   **Privacy policy**, two public `https://` pages; Fleetless checks each
+   when you save. (Without both: an invitation, a registration and an
+   accepted invitation answer `legal_links_missing`.)
+6. **Attach a robot** to the app on its page, and **create or invite an app
    user** on the Users page. That user signs in here with a password or an
    emailed code, whichever the app's **Sign-in** page turns on (password by
    default). If that page requires two-factor, the starter sets it up at the

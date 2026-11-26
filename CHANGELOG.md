@@ -35,6 +35,9 @@ copy has to change.
   cloud lets nobody in without both. Without them it invites nobody and says
   where to add them in the console. "What you do afterwards" names
   `docker compose up` beside `pnpm dev`.
+- The README's console steps name the legal notice and the privacy policy:
+  six settings, not five. Without both, an invitation, a registration and an
+  accepted invitation answer `legal_links_missing`.
 
 ## [1.6.0] — 2026-11-06
 
