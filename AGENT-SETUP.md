@@ -1,6 +1,6 @@
 # 🤖 Set it up with an agent
 
-The five console steps in the README can also be handled by an agent. Paste
+The six console steps in the README can also be handled by an agent. Paste
 the prompt into an MCP client connected to the Fleetless central endpoint,
 `https://mcp.fleetless.dev`, signed in as a Fleetless user of your
 organisation — Claude, Cursor, Claude Code, anything that speaks MCP. The
